@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# =====================================================================
+#  Klipper-Voice - installer
+#
+#  Usage:  cd ~/Klipper-Voice && ./install.sh [options]
+#
+#  -l LANG    language of the example settings: en | pt   (default: en)
+#  -v VOICE   piper voice (default per language:
+#             en -> en_US-lessac-medium, pt -> pt_PT-tugão-medium)
+#             list: https://huggingface.co/rhasspy/piper-voices
+#  -c DIR     printer_data folder                (default: ~/printer_data)
+#  -n         do not download a piper voice (espeak only)
+#  -h         help
+#
+#  Safe to run again: it never deletes or overwrites your own
+#  configuration files.
+# =====================================================================
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PRINTER_DATA="${HOME}/printer_data"
+LANG_CODE="en"
+VOICE=""
+NO_VOICE=0
+VENV="${HOME}/klipper-voice-env"
+VOICES="${HOME}/klipper-voice-voices"
+SERVICE="klipper-voice"
+
+green()  { printf '\033[32m%s\033[0m\n' "$*"; }
+yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
+red()    { printf '\033[31m%s\033[0m\n' "$*" >&2; }
+step()   { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+
+usage() { sed -n '3,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
+
+while getopts "l:v:c:nh" opt; do
+  case "$opt" in
+    l) LANG_CODE="$OPTARG" ;;
+    v) VOICE="$OPTARG" ;;
+    c) PRINTER_DATA="$OPTARG" ;;
+    n) NO_VOICE=1 ;;
+    h|*) usage ;;
+  esac
+done
+
+case "$LANG_CODE" in
+  en) : "${VOICE:=en_US-lessac-medium}" ;;
+  pt) : "${VOICE:=pt_PT-tugão-medium}" ;;
+  *)  red "Unknown language '${LANG_CODE}' (use en or pt)."; exit 1 ;;
+esac
+
+CONFIG="${PRINTER_DATA}/config"
+EXAMPLES="${REPO}/config_examples/${LANG_CODE}"
+
+if [ "$(id -u)" -eq 0 ]; then
+  red "Do not run as root. Run as the Klipper user (sudo is requested when needed)."
+  exit 1
+fi
+if [ ! -d "$CONFIG" ]; then
+  red "${CONFIG} not found. Point to your printer_data folder with -c."
+  exit 1
+fi
+
+# ---------------------------------------------------------------------
+step "1/7 System packages"
+sudo apt-get update -q
+sudo apt-get install -y -q alsa-utils espeak-ng sox libsox-fmt-all python3-venv python3-pip
+
+# ---------------------------------------------------------------------
+step "2/7 Sound (audio group and volume)"
+if ! id -nG "$USER" | grep -qw audio; then
+  sudo usermod -aG audio "$USER"
+  yellow "Added ${USER} to the audio group (the service already uses it; your SSH session only after logging in again)."
+fi
+# Headless Debian often ships with the mixer muted.
+for ctl in Master Speaker PCM Headphone; do
+  amixer -q sset "$ctl" 100% unmute 2>/dev/null || true
+done
+sudo alsactl store 2>/dev/null || true
+aplay -l 2>/dev/null | grep -E '^card' || yellow "Warning: aplay found no sound card."
+
+# ---------------------------------------------------------------------
+step "3/7 Python environment (piper + websockets) in ${VENV}"
+[ -d "$VENV" ] || python3 -m venv "$VENV"
+"$VENV/bin/pip" install -q --upgrade pip
+"$VENV/bin/pip" install -q -r "$REPO/requirements.txt"
+
+# ---------------------------------------------------------------------
+step "4/7 Voice"
+if [ "$NO_VOICE" -eq 1 ]; then
+  yellow "No piper voice (-n). Set 'engine = espeak' in klipper-voice.conf."
+elif [ -s "$VOICES/voice.onnx" ] && [ -s "$VOICES/voice.onnx.json" ] && \
+     [ "$(cat "$VOICES/NAME" 2>/dev/null)" = "$VOICE" ]; then
+  green "Voice ${VOICE} already installed."
+else
+  # en_US-lessac-medium -> en/en_US/lessac/medium/en_US-lessac-medium.onnx
+  # piper's own downloader fails on names with accents (e.g. tugão);
+  # here the URL is percent-encoded instead.
+  URL="$(python3 - "$VOICE" <<'PY'
+import sys, urllib.parse
+name = sys.argv[1]
+locale, rest = name.split("-", 1)
+speaker, quality = rest.rsplit("-", 1)
+lang = locale.split("_")[0]
+path = f"{lang}/{locale}/{speaker}/{quality}/{name}"
+print("https://huggingface.co/rhasspy/piper-voices/resolve/main/" + urllib.parse.quote(path))
+PY
+)"
+  mkdir -p "$VOICES"
+  echo "Downloading ${URL}.onnx"
+  curl -fL --progress-bar -o "$VOICES/voice.onnx.tmp" "${URL}.onnx"
+  curl -fsSL -o "$VOICES/voice.onnx.json.tmp" "${URL}.onnx.json"
+  mv "$VOICES/voice.onnx.tmp" "$VOICES/voice.onnx"
+  mv "$VOICES/voice.onnx.json.tmp" "$VOICES/voice.onnx.json"
+  echo "$VOICE" > "$VOICES/NAME"
+  green "Voice ${VOICE} installed (saved as voice.onnx)."
+fi
+
+# ---------------------------------------------------------------------
+step "5/7 Configuration files in ${CONFIG}"
+# Repository macros: symlink (updated with git)
+if [ -L "$CONFIG/Voice" ] || [ ! -e "$CONFIG/Voice" ]; then
+  ln -sfn "$REPO/Configuration" "$CONFIG/Voice"
+  green "Linked ${CONFIG}/Voice -> ${REPO}/Configuration"
+else
+  red "${CONFIG}/Voice already exists and is not a symlink. Left untouched."
+fi
+# User files: only if they do not exist yet
+for f in klipper-voice.conf Voice_Settings.cfg; do
+  if [ -e "$CONFIG/$f" ]; then
+    yellow "${f} already exists - kept."
+  else
+    cp "$EXAMPLES/$f" "$CONFIG/$f"
+    green "Created ${CONFIG}/${f} (${LANG_CODE})"
+  fi
+done
+# Default sounds (generated with sox; replace them with your own)
+SOUNDS="$CONFIG/voice_sounds"
+mkdir -p "$SOUNDS"
+[ -e "$SOUNDS/done.wav" ]  || sox -q -n -r 22050 "$SOUNDS/done.wav" \
+  synth 0.15 sine 660 vol 0.6 : synth 0.15 sine 880 vol 0.6 : synth 0.4 sine 1320 vol 0.6 fade 0 0.4 0.3
+[ -e "$SOUNDS/alert.wav" ] || sox -q -n -r 22050 "$SOUNDS/alert.wav" \
+  synth 0.2 sine 880 vol 0.6 : synth 0.1 sine 880 vol 0 : synth 0.2 sine 880 vol 0.6
+[ -e "$SOUNDS/error.wav" ] || sox -q -n -r 22050 "$SOUNDS/error.wav" \
+  synth 0.35 square 440 vol 0.3 : synth 0.35 square 330 vol 0.3 : synth 0.6 square 220 vol 0.3 fade 0 0.6 0.4
+green "Sounds in ${SOUNDS}"
+
+# ---------------------------------------------------------------------
+step "6/7 systemd service '${SERVICE}'"
+sudo tee "/etc/systemd/system/${SERVICE}.service" >/dev/null <<EOF
+[Unit]
+Description=Klipper-Voice - spoken announcements for Klipper
+After=moonraker.service sound.target
+Wants=moonraker.service
+
+[Service]
+User=${USER}
+SupplementaryGroups=audio
+ExecStart=${VENV}/bin/python3 ${REPO}/klipper_voice/klipper_voice.py ${CONFIG}/klipper-voice.conf
+Restart=always
+RestartSec=5
+Nice=10
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable "$SERVICE" >/dev/null 2>&1
+sudo systemctl restart "$SERVICE"
+
+# Let Moonraker manage the service (restart button in Mainsail/Fluidd)
+ASVC="${PRINTER_DATA}/moonraker.asvc"
+if [ -f "$ASVC" ] && ! grep -qx "$SERVICE" "$ASVC"; then
+  echo "$SERVICE" >> "$ASVC"
+  yellow "Added '${SERVICE}' to moonraker.asvc (restart Moonraker for it to show up)."
+fi
+
+# ---------------------------------------------------------------------
+step "7/7 Check"
+sleep 3
+if systemctl is-active --quiet "$SERVICE"; then
+  green "Service ${SERVICE} is running. You should have heard the startup phrase."
+else
+  red "The service did not start. See: journalctl -u ${SERVICE} -n 30 --no-pager"
+fi
+
+cat <<EOF
+
+$(green "Installation complete.")
+
+Left for you to do (once):
+
+ 1. Add to printer.cfg:
+      [include Voice/Voice.cfg]
+      [include Voice/Bed_Level_Voice.cfg]   # optional: voice-guided bed leveling
+      [include Voice_Settings.cfg]          # only if you use bed leveling
+
+ 2. Restart Klipper and type in the console:  VOICE_TEST
+
+ 3. For updates from Mainsail/Fluidd, add to moonraker.conf:
+      [update_manager Klipper-Voice]
+      type: git_repo
+      primary_branch: main
+      path: ${REPO}
+      origin: https://github.com/3devangelist/Klipper-Voice.git
+      virtualenv: ${VENV}
+      requirements: requirements.txt
+      managed_services: ${SERVICE}
+
+ 4. Hook the voice into your own macros (see README.md and PROMPT_AI.md).
+EOF
