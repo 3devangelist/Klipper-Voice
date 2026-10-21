@@ -37,6 +37,7 @@ import configparser
 import datetime
 import json
 import os
+import random
 import re
 import shlex
 import subprocess
@@ -46,7 +47,7 @@ import wave
 
 import websockets
 
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -67,6 +68,11 @@ SPEED_MIN, SPEED_MAX = 0.5, 3.0
 # volume / speed (Voice_Settings.cfg)
 MESSAGES = "gcode_macro _VOICE_MESSAGES"
 SETTINGS = "gcode_macro _VOICE_SETTINGS"
+# Sound files picked from the voice_sounds/<name>/ folders (sox reads them)
+AUDIO_EXT = (".wav", ".mp3", ".ogg", ".oga", ".flac", ".opus", ".aiff",
+             ".aif")
+# Older sound names -> the folder that replaced them
+SOUND_ALIASES = {"alert": "pause", "error": "pause", "chime": "introcall"}
 # Seconds to wait for Klipper before the startup phrase is spoken anyway
 STARTUP_WAIT = 30
 
@@ -89,8 +95,8 @@ DEFAULTS = {
     },
     "sounds": {
         "folder": "~/printer_data/config/voice_sounds",
-        "chime": "",                            # attention sound, e.g. chime.wav
-        "chime_gap": "60",
+        # introcall / introcall_gap: attention sound before each message
+        # (older confs call them chime / chime_gap)
     },
     "events": {
         "start": "Print starting",
@@ -101,13 +107,13 @@ DEFAULTS = {
         "bed_hot": "Bed hot",
         "progress": "{p} percent complete",
         "progress_step": "10",
-        "paused": "sound:alert.wav | Printer paused for filament reload or colour change",
+        "paused": "sound:pause | Printer paused for filament reload or colour change",
         "paused_repeat_minutes": "5",
         "resumed": "Resuming print",
-        "complete": "sound:done.wav | Print complete",
+        "complete": "sound:done | Print complete",
         "cancelled": "Print cancelled",
-        "error": "sound:error.wav | Print error",
-        "shutdown": "sound:error.wav | Warning, Klipper has stopped",
+        "error": "sound:pause | Print error",
+        "shutdown": "sound:pause | Warning, Klipper has stopped",
         "say_error_message": "no",
         "heating_min_delta": "10",
         "hot_margin": "3",
@@ -137,7 +143,7 @@ def expand(p):
 
 
 def items_of(value):
-    """'sound:done.wav | Print complete' -> ['sound:done.wav', 'Print complete']"""
+    """'sound:done | Print complete' -> ['sound:done', 'Print complete']"""
     return [i.strip() for i in (value or "").split("|") if i.strip()]
 
 
@@ -165,8 +171,11 @@ class KlipperVoice:
         self.device = self.cp.get("voice", "device").strip()
         self.effects = self.cp.get("voice", "effects").split()
         self.sound_dir = expand(self.cp.get("sounds", "folder"))
-        self.chime = self.cp.get("sounds", "chime").strip()
-        self.chime_gap = self.cp.getfloat("sounds", "chime_gap")
+        self.chime = self.cp.get("sounds", "introcall", fallback=self.cp.get(
+            "sounds", "chime", fallback="")).strip()
+        self.chime_gap = self.cp.getfloat(
+            "sounds", "introcall_gap",
+            fallback=self.cp.getfloat("sounds", "chime_gap", fallback=60))
         self.last_spoken = float("-inf")  # when the last message ended
         self.wav = f"/tmp/klipper-voice-{os.getuid()}.wav"
         self.queue = collections.deque(
@@ -243,14 +252,35 @@ class KlipperVoice:
         """sox effect for the volume option (100 = as is)."""
         return ["vol", f"{self.volume / 100:.2f}"]
 
+    def find_sound(self, name):
+        """"done" -> a file from voice_sounds/done/ (any name, wav, mp3,
+        ogg...; one at random if there are several). A file name also
+        works; "done.wav" falls back to the done/ folder, and the older
+        names alert / error / chime to pause / pause / introcall."""
+        path = name if os.path.isabs(name) else os.path.join(
+            self.sound_dir, name)
+        if os.path.isfile(path):
+            return path
+        folder = path if os.path.isdir(path) else os.path.splitext(path)[0]
+        alias = SOUND_ALIASES.get(os.path.basename(folder).lower())
+        if not os.path.isdir(folder) and alias:
+            folder = os.path.join(os.path.dirname(folder), alias)
+        if os.path.isdir(folder):
+            files = sorted(f for f in os.listdir(folder)
+                           if f.lower().endswith(AUDIO_EXT)
+                           and os.path.isfile(os.path.join(folder, f)))
+            if files:
+                return os.path.join(folder, random.choice(files))
+            log(f"No sound files in {folder}")
+            return None
+        log(f"Sound not found: {path}")
+        return None
+
     def play_item(self, item):
         """Runs in a worker thread: plays a sound or speaks a text."""
         if item.lower().startswith("sound:"):
-            name = item[6:].strip()
-            path = name if os.path.isabs(name) else os.path.join(
-                self.sound_dir, name)
-            if not os.path.isfile(path):
-                log(f"Sound not found: {path}")
+            path = self.find_sound(item[6:].strip())
+            if not path:
                 return
             if self.engine == "text":
                 log(f"[sound] {path}")

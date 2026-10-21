@@ -5,7 +5,8 @@
 #  Change any phrase between the quotes, then Save & Restart.
 #    - keep the quotes "..."
 #    - ""  = silent
-#    - sound:file.wav | text  = a sound from voice_sounds, then the text
+#    - sound:done | text  = a sound from the folder voice_sounds/done/
+#      (any file inside: wav, mp3, ogg...), then the text
 #    - never use ; or # inside a phrase
 #
 #  This file is yours: install.sh creates it once and never overwrites it.
@@ -24,12 +25,12 @@ variable_bed_heating: "@EV_BED_HEATING@"
 variable_bed_hot: "@EV_BED_HOT@"
 # {p} is replaced by the percentage
 variable_progress: "@EV_PROGRESS@"
-variable_paused: "sound:alert.wav | @EV_PAUSED@"
+variable_paused: "sound:pause | @EV_PAUSED@"
 variable_resumed: "@EV_RESUMED@"
-variable_complete: "sound:done.wav | @EV_COMPLETE@"
+variable_complete: "sound:done | @EV_COMPLETE@"
 variable_cancelled: "@EV_CANCELLED@"
-variable_error: "sound:error.wav | @EV_ERROR@"
-variable_shutdown: "sound:error.wav | @EV_SHUTDOWN@"
+variable_error: "sound:pause | @EV_ERROR@"
+variable_shutdown: "sound:pause | @EV_SHUTDOWN@"
 
 # --- Bed leveling (only with Voice/Bed_Level_Voice.cfg) -----------------
 variable_level_heating: "@LV_HEATING@"

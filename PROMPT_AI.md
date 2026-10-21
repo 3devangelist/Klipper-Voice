@@ -13,11 +13,12 @@ Reply in the language I write to you in. Spoken phrases must be in that language
 - Klipper macros do NOT touch the audio: they only write console messages that the service picks up.
 - Available commands (macros from Voice/Voice.cfg, already included):
   - SAY MSG="text"                  -> speaks the text
-  - PLAY_SOUND FILE=done.wav        -> plays a sound from ~/printer_data/config/voice_sounds
+  - PLAY_SOUND FILE=done            -> plays a sound from ~/printer_data/config/voice_sounds/done/
+                                       (folders: pause, done, introcall; any wav/mp3/ogg inside)
   - SAY_REPEAT SEC=60 MSG="text"    -> repeats until SAY_STOP or until the print resumes
   - SAY_STOP                        -> stops the repetition
   - VOICE_OFF / VOICE_ON            -> mute / unmute (errors are always spoken)
-  - Sounds and text can be combined in SAY_REPEAT: MSG="sound:alert.wav | Filament runout"
+  - Sounds and text can be combined in SAY_REPEAT: MSG="sound:pause | Filament runout"
   - VOICE_SET EVENT=<event> MSG="text" -> own phrase for an automatic event during the current print
     (good for the slicer's start G-code; in the slicer use %p for the progress percentage)
   - VOICE_RESET                     -> back to the phrases in Voice_Messages.cfg

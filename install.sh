@@ -184,25 +184,33 @@ for f in klipper-voice.conf Voice_Messages.cfg Voice_Settings.cfg; do
     green "Created ${CONFIG}/${f} (${LANG_CODE})"
   fi
 done
-# Default sounds (generated with sox; replace them with your own)
+# Sound folders: the service plays whatever is inside (any name; wav, mp3,
+# ogg, flac...; one at random if there are several). Default sounds are
+# generated with sox; replace them with your own.
 SOUNDS="$CONFIG/voice_sounds"
 mkdir -p "$SOUNDS"
-[ -e "$SOUNDS/done.wav" ]  || sox -q -n -r 22050 "$SOUNDS/done.wav" \
+# Older installs had loose files: alert.wav -> pause/, done.wav -> done/,
+# chime.wav -> introcall/ (an old error.wav is left where it is, unused)
+for pair in pause:alert done:done introcall:chime; do
+  dir="${pair%%:*}"; old="${pair##*:}"
+  mkdir -p "$SOUNDS/$dir"
+  if [ -e "$SOUNDS/$old.wav" ]; then mv -n "$SOUNDS/$old.wav" "$SOUNDS/$dir/"; fi
+done
+has_sound() { find "$1" -maxdepth 1 -type f | grep -qiE '\.(wav|mp3|ogg|oga|flac|opus|aiff?)$'; }
+has_sound "$SOUNDS/done" || sox -q -n -r 22050 "$SOUNDS/done/done.wav" \
   synth 0.15 sine 660 vol 0.6 : synth 0.15 sine 880 vol 0.6 : synth 0.4 sine 1320 vol 0.6 fade 0 0.4 0.3
-[ -e "$SOUNDS/alert.wav" ] || sox -q -n -r 22050 "$SOUNDS/alert.wav" \
+has_sound "$SOUNDS/pause" || sox -q -n -r 22050 "$SOUNDS/pause/pause.wav" \
   synth 0.2 sine 880 vol 0.6 : synth 0.1 sine 880 vol 0 : synth 0.2 sine 880 vol 0.6
-[ -e "$SOUNDS/error.wav" ] || sox -q -n -r 22050 "$SOUNDS/error.wav" \
-  synth 0.35 square 440 vol 0.3 : synth 0.35 square 330 vol 0.3 : synth 0.6 square 220 vol 0.3 fade 0 0.6 0.4
-# Attention chime (G-E-C, like a shopping centre announcement)
-if [ ! -e "$SOUNDS/chime.wav" ]; then
+# Intro call before each message (G-E-C, like a shopping centre announcement)
+if ! has_sound "$SOUNDS/introcall"; then
   T="$(mktemp -d)"
   sox -q -n -r 22050 "$T/1.wav" synth 0.55 sine 784 fade q 0.005 0.55 0.5 vol 0.5
   sox -q -n -r 22050 "$T/2.wav" synth 0.55 sine 659 fade q 0.005 0.55 0.5 vol 0.5
   sox -q -n -r 22050 "$T/3.wav" synth 1.2 sine 523 fade q 0.005 1.2 1.15 vol 0.5
-  sox -q "$T/1.wav" "$T/2.wav" "$T/3.wav" "$SOUNDS/chime.wav"
+  sox -q "$T/1.wav" "$T/2.wav" "$T/3.wav" "$SOUNDS/introcall/introcall.wav"
   rm -rf "$T"
 fi
-green "Sounds in ${SOUNDS}"
+green "Sounds in ${SOUNDS} (folders pause, done, introcall)"
 
 # ---------------------------------------------------------------------
 step "6/7 systemd service '${SERVICE}'"

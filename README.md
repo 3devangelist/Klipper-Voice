@@ -64,7 +64,7 @@ The installer:
 3. creates the Python environment `~/klipper-voice-env` with piper;
 4. downloads the voice to `~/klipper-voice-voices/`. If the download fails, the service falls back to espeak;
 5. links `~/printer_data/config/Voice` → `~/Klipper-Voice/Configuration`;
-6. creates **once**, in your language, `Voice_Messages.cfg` (what the printer says), `Voice_Settings.cfg` (volume, speed and the bed leveling add-on), `klipper-voice.conf` (timings, chime, night mode) and `voice_sounds/`;
+6. creates **once**, in your language, `Voice_Messages.cfg` (what the printer says), `Voice_Settings.cfg` (volume, speed and the bed leveling add-on), `klipper-voice.conf` (timings, intro call, night mode) and the sound folders in `voice_sounds/`;
 7. creates and starts the `klipper-voice` service, which speaks its startup phrase.
 
 It is safe to run again: your files are never overwritten. To switch language, delete `Voice_Messages.cfg`, `Voice_Settings.cfg` and `klipper-voice.conf` and run `./install.sh -l <code>`.
@@ -111,13 +111,13 @@ All the phrases are in one file, `Voice_Messages.cfg`, next to `printer.cfg`. Op
 ```ini
 [gcode_macro _VOICE_MESSAGES]
 variable_startup: "Voice ready"
-variable_complete: "sound:done.wav | Your part is ready"
+variable_complete: "sound:done | Your part is ready"
 variable_progress: "{p} percent done"
 variable_start: ""
 ```
 
 - Keep the quotes. `""` keeps that message silent.
-- `sound:file.wav | text` plays a sound from `voice_sounds/`, then the text. Use `|` to chain sounds and phrases.
+- `sound:done | text` plays a sound from the folder `voice_sounds/done/`, then the text. Use `|` to chain sounds and phrases.
 - Never use `;` or `#` inside a phrase.
 - The bed leveling phrases are at the end of the same file.
 
@@ -144,7 +144,19 @@ progress_step = 25
 paused_repeat_minutes = 3
 ```
 
-- Each message starts with an attention chime (`chime = chime.wav` in `[sounds]`, empty = off), like in a shopping centre. It is skipped when the message brings its own sound, or when the previous one ended less than `chime_gap` seconds ago (60 by default), so bed leveling and phrases in a row are not interrupted.
+- Each message starts with an **intro call**, an attention sound like in a shopping centre (`introcall` in `[sounds]`, empty = off). It is skipped when the message brings its own sound, or when the previous one ended less than `introcall_gap` seconds ago (60 by default), so bed leveling and phrases in a row are not interrupted.
+
+## Your own sounds (`voice_sounds/`)
+
+One folder per sound, next to `printer.cfg`:
+
+| Folder | Played |
+|---|---|
+| `pause/` | when the printer needs you: pause (filament runout, colour change), print error, Klipper stopped |
+| `done/` | print complete |
+| `introcall/` | before each message (the intro call) |
+
+Upload any audio file into a folder from Mainsail/Fluidd: any name, wav, mp3, ogg or flac. Put several and one is picked at random each time. An empty folder stays silent and the phrase is still spoken. The installer fills each folder with a simple default sound.
 - Progress follows `M73` if your slicer emits it, otherwise the file position.
 - Heating is only announced for real heat-ups, at least `heating_min_delta` degrees, so small temperature changes during a print stay silent.
 
@@ -188,7 +200,7 @@ SAY MSG="Nozzle hot"
 | Command | Does |
 |---|---|
 | `SAY MSG="text"` | speaks the text |
-| `PLAY_SOUND FILE=done.wav` | plays a sound from `voice_sounds` (wav, mp3, ogg...) |
+| `PLAY_SOUND FILE=done` | plays a sound from a `voice_sounds` folder (or a file: `FILE=my.mp3`) |
 | `SAY_REPEAT SEC=60 MSG="text"` | repeats until `SAY_STOP` or the print resumes |
 | `SAY_STOP` | stops the repetition |
 | `VOICE_SET EVENT=... MSG="..."` | phrase for an automatic event, for this print |

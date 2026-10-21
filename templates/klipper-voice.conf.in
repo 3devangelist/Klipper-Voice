@@ -35,15 +35,19 @@ espeak = espeak-ng -v @ESPEAK@ -s 165 -a 140
 device =
 
 [sounds]
-# Sounds folder (wav, mp3, ogg...). Inside the config folder so you can
-# upload files from Mainsail/Fluidd.
+# Sounds folder, inside the config folder so you can upload files from
+# Mainsail/Fluidd. One subfolder per sound: pause (needs attention: pause,
+# errors), done (print complete) and introcall.
+# Put any audio file inside (wav, mp3, ogg...; any name). With several
+# files, one is picked at random each time.
 folder = ~/printer_data/config/voice_sounds
-# Attention sound before each message, like in a shopping centre
-# (empty = off). Messages that bring their own sound don't get it.
-chime = chime.wav
-# No chime if the previous message ended less than this many seconds ago
-# (bed leveling, several phrases in a row)
-chime_gap = 60
+# Intro call: attention sound before each message, like in a shopping
+# centre (a folder in voice_sounds; empty = off). Messages that bring
+# their own sound don't get it.
+introcall = introcall
+# No intro call if the previous message ended less than this many
+# seconds ago (bed leveling, several phrases in a row)
+introcall_gap = 60
 
 [events]
 # Automatic events (their phrases are in Voice_Messages.cfg)
