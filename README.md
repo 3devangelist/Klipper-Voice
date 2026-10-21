@@ -273,6 +273,17 @@ Your files (`Voice_Messages.cfg`, `klipper-voice.conf`, `Voice_Settings.cfg`, `v
 
 ## Credits and licence
 
-Created by Ricardo Pereira (Mazecreative) for an Ender 6 in Vila Nova de Gaia, Portugal. Repository layout inspired by [KAMP](https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging).
+Created by Ricardo Pereira for an Ender 6 in Vila Nova de Gaia, Portugal - vivecoded with Claude.
+
+"CLAUDE"
+Adiciona aqui um texto a explicar de onde a ideia nasceu
+problemas na impressora por instabilidade de pacotes e problemas no cartão SD mudei de cartão 2 vezes no ultimo ano!
+comprei um pc mini hp por 80 euros  HP 800 G2 MINI CORE i3-6100T 6-GEN 4GB 128GB SSD
+quando estava a configurar o sistema lembreime que tinha placa de som e uma pequena coluna e neste contexto nasceu este sistema
+
+Corrige este texto e coloca direito 
+
+
+Repository layout inspired by [KAMP](https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging).
 
 Licence: GPL-3.0. Each piper voice carries its own licence; see its model card in piper-voices.
