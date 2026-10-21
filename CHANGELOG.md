@@ -17,6 +17,12 @@ The voice controls are now a single command with parameters, and a single **VOIC
 
 **Breaking change:** the old commands are gone. If your slicer's G-code or your own macros use them, change them as in the table. `SAY`, `PLAY_SOUND`, `SAY_REPEAT` and `SAY_STOP` stay the same.
 
+### Clearer voice
+
+- New default sound processing (`effects`): lighter compression that keeps the body of the voice. Chosen by ear on the Ender 6 speaker.
+- Every option now starts with `gain -6`. The old default had no headroom, and its filters clipped (distorted) a little, which made the voice harder to understand.
+- `klipper-voice.conf` lists four options in its comments (light, small speaker, clear consonants, pure), so each user can pick the one that suits their speaker. Existing installs keep their own `effects` line: copy the new one from the README if you want it.
+
 ### Also new
 
 - The user manual has a section of **example macros** ready to copy: start stages, load and unload filament, runout reason, "take the part out" reminder, calibrations, night button, slicer lines.

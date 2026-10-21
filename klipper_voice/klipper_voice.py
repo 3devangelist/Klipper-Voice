@@ -88,8 +88,9 @@ DEFAULTS = {
         "model": "~/klipper-voice-voices/voice.onnx",
         "length_scale": "1.2",
         "volume": "100",                        # 0..100, voice and sounds
-        "effects": ("highpass 250 compand 0.05,0.2 "
-                    "6:-70,-60,-30,-15,-15,-6,0,-3 -3 -90 0.1 gain -n -1"),
+        # headroom, light compression, normalised to -1 dB (no clipping)
+        "effects": ("gain -6 highpass 120 compand 0.02,0.20 "
+                    "6:-60,-50,-30,-20,0,-10 -5 -90 0.05 gain -n -1"),
         "espeak": "espeak-ng -v en -s 165 -a 140",
         "device": "",
     },

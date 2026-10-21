@@ -108,6 +108,8 @@ VOICE VOLUME=70 SPEED=1.6
 
 The change is applied at once and the printer says its test phrase, so you hear the result. The value is also saved in `Voice_Settings.cfg`, so it stays after a restart.
 
+**Still hard to understand?** Every speaker is different. In `klipper-voice.conf`, the `effects` line under `[voice]` sets how the voice is processed, and the file comes with four options written in the comments (light, small speaker, clear consonants, pure). Swap the line for another option, then restart the voice (section 10). The [README](README.md#sound-processing-make-the-voice-clear-on-your-speaker) explains how to compare them over SSH.
+
 ## 6. Your own sounds
 
 `voice_sounds/` has one folder per sound:
@@ -302,6 +304,7 @@ This is only for printers with **manual bed screws and a probe**. Setting it up 
 | A phrase did not change | Did you click **SAVE & RESTART**? Check the quotes and that there is no `;` or `#` |
 | Klipper shows an error after editing | A quote is probably missing. Open the file again and fix that line |
 | Too loud / too quiet | `VOICE VOLUME=…` |
+| Hard to understand, harsh or muffled | another `effects` option in `klipper-voice.conf` (section 5) |
 | Too fast / too slow | `VOICE SPEED=…` |
 
 More cases are in the [README](README.md#troubleshooting).

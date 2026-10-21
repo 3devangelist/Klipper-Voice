@@ -159,6 +159,25 @@ paused_repeat_minutes = 3
 
 Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), sound card and sound processing. Volume and speed are in `Voice_Settings.cfg`.
 
+### Sound processing: make the voice clear on *your* speaker
+
+Every speaker sounds different, so the processing of the voice (`effects` in `[voice]`, sox effects) can be changed. The conf comes with four ready options; keep the one you understand best and restart the `klipper-voice` service:
+
+| Option | `effects =` | For |
+|---|---|---|
+| Light (default) | `gain -6 highpass 120 compand 0.02,0.20 6:-60,-50,-30,-20,0,-10 -5 -90 0.05 gain -n -1` | most speakers: keeps the body of the voice |
+| Small speaker | `gain -6 highpass 250 compand 0.05,0.2 6:-70,-60,-30,-15,-15,-6,0,-3 -3 -90 0.1 gain -n -1` | very small speakers: no bass, as loud as possible |
+| Clear consonants | `gain -6 highpass 120 equalizer 3000 1q +5 compand 0.02,0.20 6:-60,-50,-30,-20,0,-10 -5 -90 0.05 gain -n -1` | muffled speakers |
+| Pure | `gain -n -1` | good speakers: the voice as piper makes it |
+
+To compare them before choosing, play the same voice file through each one over SSH:
+
+```bash
+sox -q file.wav -t wav - <effects> | aplay -q
+```
+
+Always start with `gain -6`: it leaves headroom so the filters do not clip (distort). Before v1.9.0 the default had no headroom and distorted a little, which made the voice harder to understand.
+
 ## Your own sounds (`voice_sounds/`)
 
 One folder per sound, next to `printer.cfg`:
@@ -283,6 +302,7 @@ Before using it, fill in `Voice_Settings.cfg`:
 | The voice says nothing | `journalctl -u klipper-voice -f` and type `VOICE`; the log shows every event and phrase |
 | `RESPOND` error | `[respond]` is missing; `Voice.cfg` already includes it, check `[include Voice/Voice.cfg]` |
 | Voice too quiet / too loud | `variable_volume` in `Voice_Settings.cfg`, or `VOICE VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
+| Voice hard to understand, harsh or muffled | try another `effects` option (see "Sound processing" above) and a slower `VOICE SPEED=` |
 | A pop or noise now and then | Intel sound cards power down when idle and pop when they wake up. `install.sh` turns that off (`/etc/modprobe.d/klipper-voice.conf`); run it again on older installs |
 | Robotic voice | piper voice missing or failed to load: see the log, run `./install.sh -v <voice>` |
 | Old phrases after a change | `Voice_Messages.cfg`: Save & Restart (Klipper). `klipper-voice.conf`: `sudo systemctl restart klipper-voice`; `pgrep -af klipper_voice.py` must show a single process |

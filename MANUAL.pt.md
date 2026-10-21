@@ -108,6 +108,8 @@ VOICE VOLUME=70 SPEED=1.6
 
 A mudança é aplicada logo e a impressora diz a frase de teste, para ouvires o resultado. O valor também fica gravado no `Voice_Settings.cfg`, por isso mantém-se depois de reiniciar.
 
+**Ainda se percebe mal?** Cada coluna é diferente. No `klipper-voice.conf`, a linha `effects` em `[voice]` define como a voz é processada, e o ficheiro traz quatro opções escritas nos comentários (leve, coluna pequena, consoantes claras, pura). Troca a linha por outra opção e reinicia a voz (secção 10). O [README](README.pt.md#processamento-do-som-voz-clara-na-tua-coluna) explica como compará-las por SSH.
+
 ## 6. Os teus próprios sons
 
 A pasta `voice_sounds/` tem uma pasta por som:
@@ -302,6 +304,7 @@ Só serve para impressoras com **parafusos manuais na cama e uma sonda**. A conf
 | Uma frase não mudou | Clicaste em **SAVE & RESTART**? Confirma as aspas e que não há `;` nem `#` |
 | O Klipper dá erro depois de editares | Provavelmente falta uma aspa. Abre o ficheiro outra vez e corrige essa linha |
 | Muito alto / muito baixo | `VOICE VOLUME=…` |
+| Difícil de perceber, áspera ou abafada | outra opção de `effects` no `klipper-voice.conf` (secção 5) |
 | Muito rápido / muito lento | `VOICE SPEED=…` |
 
 Há mais casos no [README](README.pt.md#resolução-de-problemas).

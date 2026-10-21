@@ -25,9 +25,22 @@ engine = piper
 # Piper voice model (installed: @VOICE@)
 model = ~/klipper-voice-voices/voice.onnx
 # Volume and speaking speed are in Voice_Settings.cfg
-# Sound processing (sox) for small speakers:
-# cut the bass, compress and normalise as loud as possible without clipping
-effects = highpass 250 compand 0.05,0.2 6:-70,-60,-30,-15,-15,-6,0,-3 -3 -90 0.1 gain -n -1
+# Sound processing of the voice (sox effects). Every speaker is different:
+# try the options below and keep the one you understand best. To compare
+# them, play a voice file through each one, e.g.:
+#   sox -q file.wav -t wav - <effects> | aplay -q
+# After changing it, restart the "klipper-voice" service.
+#
+# Light compression, keeps the body of the voice (default):
+effects = gain -6 highpass 120 compand 0.02,0.20 6:-60,-50,-30,-20,0,-10 -5 -90 0.05 gain -n -1
+# Very small speaker: no bass, strong compression, as loud as possible:
+# effects = gain -6 highpass 250 compand 0.05,0.2 6:-70,-60,-30,-15,-15,-6,0,-3 -3 -90 0.1 gain -n -1
+# Clearer consonants (3 kHz lifted), for muffled speakers:
+# effects = gain -6 highpass 120 equalizer 3000 1q +5 compand 0.02,0.20 6:-60,-50,-30,-20,0,-10 -5 -90 0.05 gain -n -1
+# The voice as piper makes it, only louder (good speakers):
+# effects = gain -n -1
+# Always start with "gain -6": it leaves headroom so the filters do not
+# clip (distort).
 # espeak command (language, speed, volume) - fallback if piper fails
 espeak = espeak-ng -v @ESPEAK@ -s 165 -a 140
 # Sound card for aplay (empty = default). E.g. plughw:0,0
