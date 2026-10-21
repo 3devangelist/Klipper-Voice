@@ -2,7 +2,7 @@
 
 Make your Klipper printer **talk**. Every important moment of a print is spoken aloud through the host's own speaker (PC, mini PC or Raspberry Pi with audio out), in your language and with your own phrases:
 
-> "Bed heating" … "Bed hot" … "Nozzle heating" … "Nozzle hot" … "10 percent complete" … "20 percent complete" … "Printer paused for filament reload or colour change" *(repeated every 5 minutes until you are back)* … "Print complete"
+> "Bed heating" … "Bed hot" … "Nozzle heating" … "Nozzle hot" … "10 percent complete" … "20 percent complete" … "Printer paused" *(repeated every 5 minutes until you are back)* … "Print complete"
 
 - **Automatic events, no macro changes:** print start, nozzle and bed heating / hot, progress every 10 %, pause, resume, complete, cancel, error and Klipper shutdowns.
 - **Your phrases:** everything the printer says is in one simple file, `Voice_Messages.cfg`. The **slicer** can also give any event its own phrase for a single print (`VOICE_SET`).
@@ -110,7 +110,7 @@ All the phrases are in one file, `Voice_Messages.cfg`, next to `printer.cfg`. Op
 
 ```ini
 [gcode_macro _VOICE_MESSAGES]
-variable_startup: "Voice ready"
+variable_startup: "Ender 6 connected!"
 variable_complete: "sound:done | Your part is ready"
 variable_progress: "{p} percent done"
 variable_start: ""
@@ -127,11 +127,11 @@ The service watches the printer through Moonraker and speaks on its own:
 
 | Event | When | Default phrase (en) |
 |---|---|---|
-| `start` | a print starts | Print starting |
+| `start` | a print starts | Print started |
 | `bed_heating` / `bed_hot` | bed target set / reached | Bed heating / Bed hot |
 | `nozzle_heating` / `nozzle_hot` | nozzle target set / reached | Nozzle heating / Nozzle hot |
 | `progress` | every `progress_step` % (default 10) | {p} percent complete |
-| `paused` | pause (runout, M600, PAUSE), repeated every `paused_repeat_minutes` (default 5) | Printer paused for filament reload or colour change |
+| `paused` | pause (runout, M600, PAUSE), repeated every `paused_repeat_minutes` (default 5) | Printer paused |
 | `resumed` | print resumes | Resuming print |
 | `complete` / `cancelled` | end of print | Print complete / Print cancelled |
 | `error` / `shutdown` | print error / Klipper stopped (a shutdown mid-print says only the `shutdown` phrase) | Print error / Warning, Klipper has stopped |

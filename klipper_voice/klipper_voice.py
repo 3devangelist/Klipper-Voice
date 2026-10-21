@@ -79,7 +79,7 @@ STARTUP_WAIT = 30
 DEFAULTS = {
     "general": {
         "moonraker": "ws://127.0.0.1:7125/websocket",
-        "startup": "Voice ready",
+        "startup": "Printer connected!",
         "test": "",                             # empty: use "startup"
         "queue": "3",
     },
@@ -99,7 +99,7 @@ DEFAULTS = {
         # (older confs call them chime / chime_gap)
     },
     "events": {
-        "start": "Print starting",
+        "start": "Print started",
         "start_delay": "3",
         "nozzle_heating": "Nozzle heating",
         "nozzle_hot": "Nozzle hot",
@@ -107,7 +107,7 @@ DEFAULTS = {
         "bed_hot": "Bed hot",
         "progress": "{p} percent complete",
         "progress_step": "10",
-        "paused": "sound:pause | Printer paused for filament reload or colour change",
+        "paused": "sound:pause | Printer paused",
         "paused_repeat_minutes": "5",
         "resumed": "Resuming print",
         "complete": "sound:done | Print complete",
