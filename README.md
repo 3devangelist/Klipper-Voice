@@ -81,10 +81,10 @@ Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic
 
 Too fast or too slow? Tune it from the console until it sounds right, for example `VOICE_SPEED SPEED=1.6`. Each language starts with its own value.
 
-For updates from Mainsail/Fluidd, add to `moonraker.conf`:
+For updates from Mainsail/Fluidd, add to `moonraker.conf` (the section name must be `klipper-voice`, the same as the service, or Moonraker rejects `managed_services`):
 
 ```ini
-[update_manager Klipper-Voice]
+[update_manager klipper-voice]
 type: git_repo
 primary_branch: main
 path: ~/Klipper-Voice

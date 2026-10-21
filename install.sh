@@ -242,7 +242,7 @@ Left for you to do (once):
  2. Restart Klipper and type in the console:  VOICE_TEST
 
  3. For updates from Mainsail/Fluidd, add to moonraker.conf:
-      [update_manager Klipper-Voice]
+      [update_manager klipper-voice]
       type: git_repo
       primary_branch: main
       path: ${REPO}
