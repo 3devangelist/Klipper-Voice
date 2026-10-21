@@ -53,7 +53,7 @@ def check(name, got, expected):
 
 
 async def test_print_events():
-    # VOICE_SET start after the state change still silences "start";
+    # VOICE EVENT start after the state change still silences "start";
     # bed heating during the start delay is spoken after it
     v = make(); v.print_state = "standby"
     upd(v, print_stats={"state": "printing"})
@@ -61,10 +61,10 @@ async def test_print_events():
     line(v, "VOICE_CTL: set complete Bracket ready")
     upd(v, heater_bed={"target": 60, "temperature": 20})
     await asyncio.sleep(0.5)
-    check("VOICE_SET silences start", spoken, ["Bed heating"])
+    check("VOICE EVENT silences start", spoken, ["Bed heating"])
     spoken.clear()
     upd(v, print_stats={"state": "complete"})
-    check("VOICE_SET phrase for complete", spoken, ["Bracket ready"])
+    check("VOICE EVENT phrase for complete", spoken, ["Bracket ready"])
     spoken.clear()
 
     # heating held during the start delay, spoken after "start"
@@ -76,13 +76,13 @@ async def test_print_events():
     check("start, then heating", spoken, ["Print started", "Bed heating"])
     spoken.clear()
 
-    # a VOICE_SET typed outside a print is dropped at the next start
+    # a VOICE EVENT typed outside a print is dropped at the next start
     v = make(); v.print_state = "standby"
     line(v, "VOICE_CTL: set start Old phrase")
     v.overrides_at -= 60
     upd(v, print_stats={"state": "printing"})
     await asyncio.sleep(0.5)
-    check("stale VOICE_SET dropped", spoken, ["Print started"])
+    check("stale VOICE EVENT dropped", spoken, ["Print started"])
     spoken.clear()
 
     # shutdown mid-print: only the shutdown phrase, not error + shutdown
@@ -113,15 +113,15 @@ def test_speed_and_volume_in_conf():
                 "length_scale = 1.4\nengine = text\n\n[other]\nlength_scale = 9\n")
     v = listen(kv.KlipperVoice(conf))
     line(v, "VOICE_CTL: speed 1.7")
-    check("VOICE_SPEED applied", (v.length_scale, spoken), (1.7, ["Voz pronta"]))
+    check("VOICE SPEED applied", (v.length_scale, spoken), (1.7, ["Voz pronta"]))
     txt = open(conf, encoding="utf-8").read()
-    check("VOICE_SPEED saved, comments kept",
+    check("VOICE SPEED saved, comments kept",
           ("length_scale = 1.7\n" in txt, "length_scale = 9" in txt,
            "# 1.0 = normal" in txt), (True, True, True))
     line(v, "VOICE_CTL: speed 10")
-    check("VOICE_SPEED clamped", v.length_scale, 3.0)
+    check("VOICE SPEED clamped", v.length_scale, 3.0)
     line(v, "VOICE_CTL: speed abc")
-    check("VOICE_SPEED invalid ignored", v.length_scale, 3.0)
+    check("VOICE SPEED invalid ignored", v.length_scale, 3.0)
     line(v, "VOICE_CTL: speed")
     w = make(); w.length_scale = 2.4
     wpm, ls = w.espeak_base
@@ -131,17 +131,30 @@ def test_speed_and_volume_in_conf():
     v = listen(kv.KlipperVoice(conf))
     check("default volume", (v.volume, v.vol()), (100, ["vol", "1.00"]))
     line(v, "VOICE_CTL: volume 60")
-    check("VOICE_VOLUME applied", (v.volume, v.vol()), (60, ["vol", "0.60"]))
-    check("VOICE_VOLUME line added",
+    check("VOICE VOLUME applied", (v.volume, v.vol()), (60, ["vol", "0.60"]))
+    check("VOICE VOLUME line added",
           "[voice]\nvolume = 60\n" in open(conf, encoding="utf-8").read(), True)
     line(v, "VOICE_CTL: volume 70")
     txt = open(conf, encoding="utf-8").read()
-    check("VOICE_VOLUME line replaced",
+    check("VOICE VOLUME line replaced",
           (txt.count("volume = "), "volume = 70" in txt), (1, True))
     line(v, "VOICE_CTL: volume 150"); check("volume max", v.volume, 100)
     line(v, "VOICE_CTL: volume -5"); check("volume min", v.volume, 0)
     line(v, "VOICE_CTL: volume x"); check("volume invalid", v.volume, 0)
     check("volume reloaded", kv.KlipperVoice(conf).volume, 0)
+
+    # VOICE VOLUME=.. SPEED=..: one sample phrase, after the speed
+    spoken.clear()
+    line(v, "VOICE_CTL: volume 50.0 quiet")
+    line(v, "VOICE_CTL: speed 1.5")
+    check("volume quiet + speed: one sample", (v.volume, v.length_scale, spoken),
+          (50, 1.5, ["Voz pronta"]))
+    v.ws = None
+    line(v, "VOICE_CTL: status")                        # console only
+    check("status speaks nothing", spoken, ["Voz pronta"])
+    line(v, "VOICE_CTL: off"); check("MUTE=1", v.muted, True)
+    line(v, "VOICE_CTL: on"); check("MUTE=0", v.muted, False)
+    spoken.clear()
 
     out = conf + ".out"
     v.pipe([sys.executable, "-c", "print('abc')"],
@@ -186,7 +199,7 @@ def test_voice_messages():
     upd(v, print_stats={"state": "cancelled"})
     check('"" is silent', spoken, [])
     line(v, "VOICE_CTL: test")
-    check("VOICE_TEST", spoken, ["Teste"])
+    check("VOICE (test)", spoken, ["Teste"])
     spoken.clear()
     upd(v, **{kv.MESSAGES: {"test": "Novo teste"}})
     line(v, "VOICE_CTL: test")

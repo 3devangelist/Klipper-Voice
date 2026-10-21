@@ -17,20 +17,23 @@ Reply in the language I write to you in. Spoken phrases must be in that language
                                        (folders: pause, done, introcall; any wav/mp3/ogg inside)
   - SAY_REPEAT SEC=60 MSG="text"    -> repeats until SAY_STOP or until the print resumes
   - SAY_STOP                        -> stops the repetition
-  - VOICE_OFF / VOICE_ON            -> mute / unmute (errors are always spoken)
   - Sounds and text can be combined in SAY_REPEAT: MSG="sound:pause | Filament runout"
-  - VOICE_SET EVENT=<event> MSG="text" -> own phrase for an automatic event during the current print
-    (good for the slicer's start G-code; in the slicer use %p for the progress percentage)
-  - VOICE_RESET                     -> back to the phrases in Voice_Messages.cfg
+  - VOICE is the one control command; Klipper only accepts NAME=value parameters:
+    - VOICE                         -> test phrase + volume, speed and on/off in the console
+    - VOICE VOLUME=70 SPEED=1.6     -> volume 0..100 / speed (1.0 normal, higher = slower), saved
+    - VOICE MUTE=1 / VOICE MUTE=0   -> mute / unmute (errors are always spoken)
+    - VOICE EVENT=<event> MSG="text" -> own phrase for an automatic event during the current print
+      (good for the slicer's start G-code; in the slicer use %p for the progress percentage)
+    - VOICE RESET=1                 -> back to the phrases in Voice_Messages.cfg
 - The service ALREADY announces on its own, without macros: print start, nozzle heating / hot,
   bed heating / hot, progress every 10 %, paused (repeated every 5 minutes until resumed), resumed,
   complete, cancelled, error and Klipper shutdowns. All the phrases are in Voice_Messages.cfg
   ([gcode_macro _VOICE_MESSAGES], one variable_<event> per phrase, in quotes; "" = silent).
   Do NOT add SAY for those events in macros, or the phrase will be spoken twice. To change them,
-  edit Voice_Messages.cfg or use VOICE_SET; to replace one with my own SAY lines, set it to "".
+  edit Voice_Messages.cfg or use VOICE EVENT=; to replace one with my own SAY lines, set it to "".
 - Phrases are spoken in order; if more than 3 pile up, the oldest are dropped.
 - Volume and speaking speed: [gcode_macro _VOICE_SETTINGS] (variable_volume, variable_speed) at the
-  top of Voice_Settings.cfg, or VOICE_VOLUME / VOICE_SPEED from the console.
+  top of Voice_Settings.cfg, or VOICE VOLUME= / VOICE SPEED= from the console.
 - Voice-guided bed leveling (Voice/Bed_Level_Voice.cfg): BED_LEVEL_VOICE. The machine settings are
   in [gcode_macro _BLV_CONFIG], file Voice_Settings.cfg; its phrases (variable_level_*) are in
   Voice_Messages.cfg.
@@ -38,7 +41,8 @@ Reply in the language I write to you in. Spoken phrases must be in that language
 ## What I want
 1. Hook the voice into my macros and my slicer's custom G-code where it makes sense, for example:
    - START_PRINT stages that are not automatic events ("Meshing", "Purging");
-   - VOICE_SET lines in the slicer's start G-code to personalise events for each print;
+   - VOICE EVENT= lines in the slicer's start G-code to personalise events for each print;
+   - follow the style of the example macros in MANUAL.md, section 8 (Example macros);
    - end of calibrations, filament load / unload macros.
 2. Fill in Voice_Settings.cfg for my machine (if I use voice-guided leveling).
 
@@ -68,7 +72,7 @@ Reply in the language I write to you in. Spoken phrases must be in that language
 - The leveling phrases (variable_level_* in Voice_Messages.cfg) are already in my language.
 
 ## At the end
-Give me a short test list: VOICE_TEST; a short print to hear the events; simulate a filament runout;
+Give me a short test list: VOICE; a short print to hear the events; simulate a filament runout;
 BED_LEVEL_VOICE SOAK=0.
 ```
 

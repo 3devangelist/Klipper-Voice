@@ -2,7 +2,7 @@
 #  Klipper-Voice - SETTINGS
 #  Language: @NAME@
 #
-#  Change a value, then Save & Restart. VOICE_VOLUME and VOICE_SPEED in
+#  Change a value, then Save & Restart. VOICE VOLUME= and VOICE SPEED= in
 #  the console also save their value here.
 #  This file is yours: install.sh creates it once and never overwrites it.
 #  Need help filling it in? Use PROMPT_AI.md from the repository.

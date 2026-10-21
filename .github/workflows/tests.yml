@@ -18,6 +18,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Service logic
         run: python3 tests/test_klipper_voice.py
+      - name: Macros (rendered like Klipper)
+        run: |
+          python3 -m pip install --quiet jinja2
+          python3 tests/test_macros.py
       - name: Languages and templates
         run: python3 tests/test_languages.py
       - name: Shell scripts

@@ -9,7 +9,7 @@ Connects to Moonraker and:
       resumed, complete, cancelled, error and Klipper shutdowns
   - speaks console lines starting with "SAY:"          (SAY macro)
   - plays sounds from lines starting with "SOUND:"     (PLAY_SOUND macro)
-  - obeys "VOICE_CTL:" off | on | stop | test | repeat <sec> <text>
+  - obeys "VOICE_CTL:" off | on | stop | test | status | repeat <sec> <text>
                        | set <event> <text> | reset | speed [value]
                        | volume [value]
     ("set" lets the slicer's start G-code give any event its own phrase
@@ -47,7 +47,7 @@ import wave
 
 import websockets
 
-VERSION = "1.8.0"
+VERSION = "1.9.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -57,12 +57,12 @@ ERROR_EVENTS = ("error", "shutdown")
 # Events that wait while "start" is pending, so they are spoken after it
 HELD_EVENTS = ("nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
                "progress")
-# VOICE_SET lines older than this when a print starts were typed outside a
+# VOICE EVENT= lines older than this when a print starts were typed outside a
 # print and are dropped (newer ones may have raced ahead of the state change)
 OVERRIDE_GRACE = 10
 # A print "error" this soon after a Klipper shutdown is not spoken twice
 SHUTDOWN_WINDOW = 15
-# VOICE_SPEED limits (length_scale: 1.0 = normal, higher = slower)
+# VOICE SPEED= limits (length_scale: 1.0 = normal, higher = slower)
 SPEED_MIN, SPEED_MAX = 0.5, 3.0
 # Klipper objects holding the phrases (Voice_Messages.cfg) and the
 # volume / speed (Voice_Settings.cfg)
@@ -165,7 +165,7 @@ class KlipperVoice:
         self.length_scale = self.cp.getfloat("voice", "length_scale")
         self.volume = min(100, max(0, self.cp.getint("voice", "volume")))
         # espeak speed (-s, words per minute) follows length_scale changes
-        # made with VOICE_SPEED, relative to the values in the config file
+        # made with VOICE SPEED=, relative to the values in the config file
         m = re.search(r"-s\s+(\d+)", self.cp.get("voice", "espeak"))
         self.espeak_base = (int(m.group(1)) if m else 175, self.length_scale)
         self.device = self.cp.get("voice", "device").strip()
@@ -191,13 +191,13 @@ class KlipperVoice:
         self.has_request = asyncio.Event()
         self.muted = False
         self.repeater = None              # repeating task (pause / SAY_REPEAT)
-        self.overrides = {}               # event -> phrase, from VOICE_SET
+        self.overrides = {}               # event -> phrase, from VOICE EVENT=
         self.messages = {}                # phrases from Voice_Messages.cfg
         self.klipper_settings = False     # Voice_Settings.cfg has volume...
         self.settings_file = os.path.join(os.path.dirname(
             self.conf_file or expand(DEFAULT_CONF)), "Voice_Settings.cfg")
         self.startup_pending = True       # startup phrase not spoken yet
-        self.overrides_at = float("-inf")  # time of the last VOICE_SET
+        self.overrides_at = float("-inf")  # time of the last VOICE EVENT=
         self.start_task = None            # pending "start" announcement
         self.held = None                  # events waiting for "start"
         self.print_state = None
@@ -388,6 +388,9 @@ class KlipperVoice:
             self.stop_repeat()
         elif cmd == "test":
             self.request(self.test_items())
+        elif cmd == "status":
+            self.console(f"Voice: {'muted' if self.muted else 'on'}, "
+                         f"volume {self.volume}, speed {self.length_scale:g}")
         elif cmd == "repeat" and len(parts) == 3:
             try:
                 seconds = float(parts[1])
@@ -398,25 +401,27 @@ class KlipperVoice:
         elif cmd == "set" and len(parts) >= 2:
             event = parts[1].lower()
             if event not in EVENTS:
-                log(f"VOICE_SET: unknown event '{event}' "
-                    f"(valid: {', '.join(EVENTS)})")
+                self.console(f"VOICE EVENT: unknown event '{event}' "
+                             f"(valid: {', '.join(EVENTS)})")
                 return
             self.overrides[event] = parts[2] if len(parts) == 3 else ""
             self.overrides_at = time.monotonic()
-            log(f"VOICE_SET {event} = '{self.overrides[event]}' "
+            log(f"VOICE EVENT {event} = '{self.overrides[event]}' "
                 "(until the end of this print)")
         elif cmd == "reset":
             self.overrides.clear()
-            log("VOICE_SET overrides cleared")
-        elif cmd == "speed":
-            self.set_speed(parts[1] if len(parts) > 1 else "")
-        elif cmd == "volume":
-            self.set_volume(parts[1] if len(parts) > 1 else "")
+            log("VOICE EVENT phrases cleared")
+        elif cmd in ("speed", "volume"):
+            # "volume 70 quiet": no sample phrase (VOICE VOLUME=.. SPEED=..
+            # speaks it once, after the speed)
+            setter = self.set_speed if cmd == "speed" else self.set_volume
+            setter(parts[1] if len(parts) > 1 else "",
+                   sample=not (len(parts) > 2 and parts[2] == "quiet"))
         else:
             log(f"Unknown VOICE_CTL: '{text}'")
 
-    def set_speed(self, value):
-        """VOICE_SPEED: no value reports it; a value applies it now, saves
+    def set_speed(self, value, sample=True):
+        """VOICE SPEED=: no value reports it; a value applies it now, saves
         it (Voice_Settings.cfg, else the conf) and speaks the test phrase."""
         if not value:
             self.console(f"Voice speed: {self.length_scale:g}"
@@ -425,28 +430,30 @@ class KlipperVoice:
         try:
             speed = float(value)
         except ValueError:
-            self.console(f"VOICE_SPEED: invalid value '{value}'")
+            self.console(f"VOICE SPEED: invalid value '{value}'")
             return
         self.length_scale = round(min(SPEED_MAX, max(SPEED_MIN, speed)), 2)
         where = self.persist("speed", f"{self.length_scale:g}",
                              "voice", "length_scale")
         self.console(f"Voice speed: {self.length_scale:g} ({where})")
-        self.request(self.test_items())
+        if sample:
+            self.request(self.test_items())
 
-    def set_volume(self, value):
-        """VOICE_VOLUME: like set_speed, for the volume (0..100)."""
+    def set_volume(self, value, sample=True):
+        """VOICE VOLUME=: like set_speed, for the volume (0..100)."""
         if not value:
             self.console(f"Voice volume: {self.volume} (0..100)")
             return
         try:
             volume = round(float(value))
         except ValueError:
-            self.console(f"VOICE_VOLUME: invalid value '{value}'")
+            self.console(f"VOICE VOLUME: invalid value '{value}'")
             return
         self.volume = min(100, max(0, volume))
         where = self.persist("volume", str(self.volume), "voice", "volume")
         self.console(f"Voice volume: {self.volume} ({where})")
-        self.request(self.test_items())
+        if sample:
+            self.request(self.test_items())
 
     def apply_settings(self, values):
         """volume / speed from [gcode_macro _VOICE_SETTINGS]."""
@@ -460,7 +467,7 @@ class KlipperVoice:
             log(f"Voice_Settings.cfg: invalid volume/speed ({e})")
 
     def persist(self, var, value, section, key):
-        """Saves a VOICE_VOLUME / VOICE_SPEED value where it lives:
+        """Saves a VOICE VOLUME= / VOICE SPEED= value where it lives:
         Voice_Settings.cfg (also updated in Klipper's memory), or the conf
         on installs without it. Returns where, for the console."""
         if self.klipper_settings:
@@ -499,7 +506,7 @@ class KlipperVoice:
             return False
 
     def test_items(self):
-        """VOICE_TEST phrase: "test", else "startup", else a fixed one."""
+        """VOICE phrase: "test", else "startup", else a fixed one."""
         return (items_of(self.text("test", "general"))
                 or items_of(self.text("startup", "general"))
                 or ["Voice test"])
@@ -598,10 +605,10 @@ class KlipperVoice:
         if name != "error" or \
                 time.monotonic() - self.last_shutdown > SHUTDOWN_WINDOW:
             self.event(name)
-        self.overrides.clear()                       # VOICE_SET is per print
+        self.overrides.clear()                       # VOICE EVENT= is per print
 
     async def _start(self):
-        """The "start" event waits start_delay seconds, so VOICE_SET lines
+        """The "start" event waits start_delay seconds, so VOICE EVENT= lines
         from the slicer's start G-code arrive first. Heater and progress events in
         the meantime are held and spoken after it."""
         await asyncio.sleep(self.start_delay)

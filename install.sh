@@ -266,7 +266,7 @@ Left for you to do (once):
     Optional add-on (manual bed screws + probe only):
       [include Voice/Bed_Level_Voice.cfg]
 
- 2. Restart Klipper and type in the console:  VOICE_TEST
+ 2. Restart Klipper and type in the console:  VOICE
 
     What the printer says: Voice_Messages.cfg. Volume and speed:
     Voice_Settings.cfg. Edit, then Save & Restart.

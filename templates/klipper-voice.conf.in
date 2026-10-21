@@ -51,7 +51,7 @@ introcall_gap = 60
 
 [events]
 # Automatic events (their phrases are in Voice_Messages.cfg)
-# Seconds "start" waits, so VOICE_SET lines in the slicer's start G-code
+# Seconds "start" waits, so VOICE EVENT= lines in the slicer's start G-code
 # arrive in time (heating phrases in the meantime are spoken after it)
 start_delay = 3
 # Progress phrase every how many percent (0 = never)

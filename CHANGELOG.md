@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.9.0 — 2026-10-21
+
+### One `VOICE` command
+
+The voice controls are now a single command with parameters, and a single **VOICE** button in Mainsail's Macros panel:
+
+| Before (v1.8.0) | Now |
+|---|---|
+| `VOICE_TEST` | `VOICE` (also shows volume, speed and on/off) |
+| `VOICE_VOLUME VOLUME=70` | `VOICE VOLUME=70` |
+| `VOICE_SPEED SPEED=1.6` | `VOICE SPEED=1.6` (or both: `VOICE VOLUME=70 SPEED=1.6`) |
+| `VOICE_OFF` / `VOICE_ON` | `VOICE MUTE=1` / `VOICE MUTE=0` |
+| `VOICE_SET EVENT=complete MSG="..."` | `VOICE EVENT=complete MSG="..."` |
+| `VOICE_RESET` | `VOICE RESET=1` |
+
+**Breaking change:** the old commands are gone. If your slicer's G-code or your own macros use them, change them as in the table. `SAY`, `PLAY_SOUND`, `SAY_REPEAT` and `SAY_STOP` stay the same.
+
+### Also new
+
+- The user manual has a section of **example macros** ready to copy: start stages, load and unload filament, runout reason, "take the part out" reminder, calibrations, night button, slicer lines.
+- `tests/test_macros.py` renders the macros the way Klipper does and checks what they send.
+
 ## v1.8.0 — 2026-10-21
 
 The first release meant for other users: install it with `git clone` + `./install.sh`, and from then on use it from Mainsail alone. A step-by-step [user manual](MANUAL.md) (also [in Portuguese](MANUAL.pt.md)) shows how.

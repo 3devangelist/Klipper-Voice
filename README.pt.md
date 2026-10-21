@@ -7,7 +7,7 @@ Põe a tua impressora Klipper a **falar**. Cada momento importante de uma impres
 > "Cama a aquecer" … "Cama quente" … "Bico a aquecer" … "Bico quente" … "10 por cento concluído" … "20 por cento concluído" … "Máquina em pausa" *(repetido de 5 em 5 minutos até voltares)* … "Impressão terminada"
 
 - **Eventos automáticos, sem mexer nas macros:** início da impressão, cama e bico a aquecer / quentes, progresso a cada 10 %, pausa, retoma, fim, cancelamento, erro e paragens do Klipper.
-- **As tuas frases:** tudo o que a impressora diz está num só ficheiro simples, o `Voice_Messages.cfg`. O **slicer** também pode dar a qualquer evento uma frase própria, só para uma impressão (`VOICE_SET`).
+- **As tuas frases:** tudo o que a impressora diz está num só ficheiro simples, o `Voice_Messages.cfg`. O **slicer** também pode dar a qualquer evento uma frase própria, só para uma impressão (`VOICE EVENT=`).
 - **Nunca percas uma pausa:** enquanto a impressora espera por filamento ou por uma troca de cor, vai-te lembrando de N em N minutos.
 - **As tuas próprias mensagens** a partir de qualquer macro ou do G-code personalizado do slicer: `SAY MSG="..."`.
 - **8 línguas prontas**, escolhidas na instalação: English, Deutsch, Español, Français, Italiano, Polski, Português (Brasil), Português (Portugal). Acrescentar outra é um único ficheiro JSON.
@@ -18,7 +18,7 @@ Põe a tua impressora Klipper a **falar**. Cada momento importante de uma impres
 Klipper ──► Moonraker ──► klipper_voice.py (serviço systemd)
   estado da impressão,         │  vigia os eventos, escolhe a frase
   aquecimento, progresso,      ▼
-  SAY/VOICE_SET         piper / espeak-ng → sox → aplay → coluna
+  SAY/VOICE             piper / espeak-ng → sox → aplay → coluna
 ```
 
 O Klipper nunca toca na placa de som: o serviço ouve o Moonraker como um processo separado, com prioridade baixa e limitado a um núcleo do processador. Se a voz encravar, a impressão não é afetada.
@@ -88,7 +88,7 @@ No `printer.cfg`:
 [include Voice_Settings.cfg]
 ```
 
-Reinicia o Klipper e escreve `VOICE_TEST` na consola. A partir daí os eventos automáticos já funcionam. O [manual de utilização](MANUAL.pt.md) mostra o uso no dia a dia no Mainsail, passo a passo.
+Reinicia o Klipper e escreve `VOICE` na consola. A partir daí os eventos automáticos já funcionam. O [manual de utilização](MANUAL.pt.md) mostra o uso no dia a dia no Mainsail, passo a passo.
 
 Muito alto, muito rápido? Muda no `Voice_Settings.cfg`, como qualquer outra definição do Klipper, e depois Save & Restart:
 
@@ -98,7 +98,7 @@ variable_volume: 70       # 0..100
 variable_speed: 1.6       # 1.0 normal, maior = mais devagar
 ```
 
-Ou afina de ouvido pela consola: `VOICE_VOLUME VOLUME=70`, `VOICE_SPEED SPEED=1.6`. Cada mudança é aplicada logo e gravada no mesmo ficheiro. Cada língua começa com a sua própria velocidade.
+Ou afina de ouvido pela consola: `VOICE VOLUME=70`, `VOICE SPEED=1.6`. Cada mudança é aplicada logo e gravada no mesmo ficheiro. Cada língua começa com a sua própria velocidade.
 
 Para atualizar pelo Mainsail/Fluidd, acrescenta ao `moonraker.conf` (a secção tem de se chamar `klipper-voice`, igual ao serviço, senão o Moonraker recusa o `managed_services`):
 
@@ -175,18 +175,18 @@ Carrega qualquer ficheiro de som para uma pasta pelo Mainsail/Fluidd: qualquer n
 
 O Klipper corre o G-code personalizado do slicer como qualquer outro G-code, por isso o slicer também pode falar.
 
-**Dar a um evento uma frase própria para esta impressão** com `VOICE_SET`, por exemplo no *Machine start G-code*. A frase vale até a impressão acabar, e depois voltam as frases da configuração. Um `VOICE_SET` escrito na consola fora de uma impressão é descartado quando a impressão seguinte começa.
+**Dar a um evento uma frase própria para esta impressão** com `VOICE EVENT=`, por exemplo no *Machine start G-code*. A frase vale até a impressão acabar, e depois voltam as frases da configuração. Um `VOICE EVENT=` escrito na consola fora de uma impressão é descartado quando a impressão seguinte começa.
 
 ```gcode
-VOICE_SET EVENT=complete MSG="O suporte do robô está pronto"
-VOICE_SET EVENT=progress MSG="%p por cento do suporte"
-VOICE_SET EVENT=start MSG=""
+VOICE EVENT=complete MSG="O suporte do robô está pronto"
+VOICE EVENT=progress MSG="%p por cento do suporte"
+VOICE EVENT=start MSG=""
 ```
 
-- Põe as linhas `VOICE_SET` no **início** do start G-code. A frase do `start` espera `start_delay` segundos (por defeito 3) para elas chegarem a tempo, e as frases de aquecimento desses segundos são ditas a seguir.
+- Põe as linhas `VOICE EVENT=` no **início** do start G-code. A frase do `start` espera `start_delay` segundos (por defeito 3) para elas chegarem a tempo, e as frases de aquecimento desses segundos são ditas a seguir.
 - `MSG=""` deixa esse evento em silêncio nesta impressão.
 - No slicer, escreve `%p` para a percentagem, porque o `{}` é usado pelas variáveis do próprio slicer.
-- Podes usar as variáveis do slicer na frase. No OrcaSlicer, por exemplo: `VOICE_SET EVENT=complete MSG="[input_filename_base] está pronto"`.
+- Podes usar as variáveis do slicer na frase. No OrcaSlicer, por exemplo: `VOICE EVENT=complete MSG="[input_filename_base] está pronto"`.
 
 **Dizer alguma coisa num momento exato** com `SAY`, por exemplo no *Layer change G-code*:
 
@@ -212,12 +212,19 @@ SAY MSG="Bico quente"
 | `PLAY_SOUND FILE=done` | toca um som de uma pasta de `voice_sounds` (ou um ficheiro: `FILE=meu.mp3`) |
 | `SAY_REPEAT SEC=60 MSG="texto"` | repete até `SAY_STOP` ou até a impressão continuar |
 | `SAY_STOP` | para a repetição |
-| `VOICE_SET EVENT=... MSG="..."` | frase para um evento automático, nesta impressão |
-| `VOICE_RESET` | volta às frases do `Voice_Messages.cfg` |
-| `VOICE_VOLUME VOLUME=70` | volume de 0 a 100 para a voz e os sons. Aplicado logo, gravado no `Voice_Settings.cfg`, e é dita uma frase de exemplo. Sem `VOLUME` mostra o valor atual |
-| `VOICE_SPEED SPEED=1.4` | velocidade da fala: 1.0 normal, maior = mais devagar. Aplicada logo, gravada no `Voice_Settings.cfg`, e é dita uma frase de exemplo. Sem `SPEED` mostra o valor atual |
-| `VOICE_OFF` / `VOICE_ON` | desliga / liga a voz (os erros são sempre ditos) |
-| `VOICE_TEST` | diz a frase de teste (`variable_test` no `Voice_Messages.cfg`) |
+
+Tudo o resto é um só comando, `VOICE`, com parâmetros (um só botão no painel de Macros do Mainsail):
+
+| Comando | Faz |
+|---|---|
+| `VOICE` | diz a frase de teste (`variable_test` no `Voice_Messages.cfg`) e mostra na consola o volume, a velocidade e se a voz está ligada |
+| `VOICE VOLUME=70` | volume de 0 a 100 para a voz e os sons. Aplicado logo, gravado no `Voice_Settings.cfg`, e é dita uma frase de exemplo |
+| `VOICE SPEED=1.6` | velocidade da fala: 1.0 normal, maior = mais devagar. Igual ao `VOLUME`. Os dois juntos: `VOICE VOLUME=70 SPEED=1.6` |
+| `VOICE MUTE=1` / `VOICE MUTE=0` | desliga / liga a voz (os erros são sempre ditos) |
+| `VOICE EVENT=complete MSG="..."` | frase para um evento automático, nesta impressão. `MSG=""` deixa-o em silêncio |
+| `VOICE RESET=1` | volta às frases do `Voice_Messages.cfg` |
+
+O Klipper só aceita parâmetros `NOME=valor`, por isso é `VOICE MUTE=1` e não `VOICE OFF`.
 
 **Duas regras:**
 
@@ -273,9 +280,9 @@ Antes de o usares, preenche o `Voice_Settings.cfg`:
 | Problema | Solução |
 |---|---|
 | Sem som | `aplay -l` para ver a placa; `alsamixer` (F6 escolhe a placa, M tira do silêncio); `sudo alsactl store` |
-| A voz não diz nada | `journalctl -u klipper-voice -f` e escreve `VOICE_TEST`; o registo mostra cada evento e cada frase |
+| A voz não diz nada | `journalctl -u klipper-voice -f` e escreve `VOICE`; o registo mostra cada evento e cada frase |
 | Erro de `RESPOND` | falta o `[respond]`; o `Voice.cfg` já o inclui, confirma o `[include Voice/Voice.cfg]` |
-| Voz muito baixa / muito alta | `variable_volume` no `Voice_Settings.cfg`, ou `VOICE_VOLUME VOLUME=70` na consola; vê o volume no `alsamixer`; os `effects` do conf já normalizam para −1 dB |
+| Voz muito baixa / muito alta | `variable_volume` no `Voice_Settings.cfg`, ou `VOICE VOLUME=70` na consola; vê o volume no `alsamixer`; os `effects` do conf já normalizam para −1 dB |
 | Um estalo ou ruído de vez em quando | as placas de som Intel desligam-se quando estão paradas e estalam quando acordam. O `install.sh` desliga isso (`/etc/modprobe.d/klipper-voice.conf`); corre-o outra vez nas instalações antigas |
 | Voz robótica | a voz do piper falta ou não carregou: vê o registo e corre `./install.sh -v <voz>` |
 | Frases antigas depois de uma mudança | `Voice_Messages.cfg`: Save & Restart (Klipper). `klipper-voice.conf`: `sudo systemctl restart klipper-voice`; o `pgrep -af klipper_voice.py` tem de mostrar um só processo |

@@ -7,7 +7,7 @@ Make your Klipper printer **talk**. Every important moment of a print is spoken 
 > "Bed heating" … "Bed hot" … "Nozzle heating" … "Nozzle hot" … "10 percent complete" … "20 percent complete" … "Printer paused" *(repeated every 5 minutes until you are back)* … "Print complete"
 
 - **Automatic events, no macro changes:** print start, nozzle and bed heating / hot, progress every 10 %, pause, resume, complete, cancel, error and Klipper shutdowns.
-- **Your phrases:** everything the printer says is in one simple file, `Voice_Messages.cfg`. The **slicer** can also give any event its own phrase for a single print (`VOICE_SET`).
+- **Your phrases:** everything the printer says is in one simple file, `Voice_Messages.cfg`. The **slicer** can also give any event its own phrase for a single print (`VOICE EVENT=`).
 - **Never miss a pause:** while the printer waits for filament or a colour change, it reminds you every N minutes.
 - **Your own messages** from any macro or from the slicer's custom G-code: `SAY MSG="..."`.
 - **8 languages ready**, chosen at install time: English, Deutsch, Español, Français, Italiano, Polski, Português (Brasil), Português (Portugal). Adding one more is a single JSON file.
@@ -17,7 +17,7 @@ Make your Klipper printer **talk**. Every important moment of a print is spoken 
 ```
 Klipper ──► Moonraker ──► klipper_voice.py (systemd service)
   print state, heaters,        │  watches events, picks the phrase
-  progress, SAY/VOICE_SET      ▼
+  progress, SAY/VOICE          ▼
                         piper / espeak-ng → sox → aplay → speaker
 ```
 
@@ -88,7 +88,7 @@ In `printer.cfg`:
 [include Voice_Settings.cfg]
 ```
 
-Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic events already work. The [user manual](MANUAL.md) shows everyday use in Mainsail, step by step.
+Restart Klipper and type `VOICE` in the console. From then on the automatic events already work. The [user manual](MANUAL.md) shows everyday use in Mainsail, step by step.
 
 Too loud, too fast? Set them in `Voice_Settings.cfg`, like any other Klipper setting, then Save & Restart:
 
@@ -98,7 +98,7 @@ variable_volume: 70       # 0..100
 variable_speed: 1.6       # 1.0 normal, higher = slower
 ```
 
-Or tune them by ear from the console: `VOICE_VOLUME VOLUME=70`, `VOICE_SPEED SPEED=1.6`. Each change is applied at once and saved in the same file. Each language starts with its own speed.
+Or tune them by ear from the console: `VOICE VOLUME=70`, `VOICE SPEED=1.6`. Each change is applied at once and saved in the same file. Each language starts with its own speed.
 
 For updates from Mainsail/Fluidd, add to `moonraker.conf` (the section name must be `klipper-voice`, the same as the service, or Moonraker rejects `managed_services`):
 
@@ -175,18 +175,18 @@ Upload any audio file into a folder from Mainsail/Fluidd: any name, wav, mp3, og
 
 Klipper runs the slicer's custom G-code like any other G-code, so the slicer can talk too.
 
-**Give an event its own phrase for this print** with `VOICE_SET`, for example in the *Machine start G-code*. The phrase applies until the print ends, then the config phrases return. A `VOICE_SET` typed in the console outside a print is dropped when the next print starts.
+**Give an event its own phrase for this print** with `VOICE EVENT=`, for example in the *Machine start G-code*. The phrase applies until the print ends, then the config phrases return. A `VOICE EVENT=` typed in the console outside a print is dropped when the next print starts.
 
 ```gcode
-VOICE_SET EVENT=complete MSG="The bracket for the robot is ready"
-VOICE_SET EVENT=progress MSG="%p percent of the bracket"
-VOICE_SET EVENT=start MSG=""
+VOICE EVENT=complete MSG="The bracket for the robot is ready"
+VOICE EVENT=progress MSG="%p percent of the bracket"
+VOICE EVENT=start MSG=""
 ```
 
-- Put the `VOICE_SET` lines at the **top** of the start G-code. The `start` phrase waits `start_delay` seconds (default 3) so they arrive in time, and heating phrases in those seconds are spoken after it.
+- Put the `VOICE EVENT=` lines at the **top** of the start G-code. The `start` phrase waits `start_delay` seconds (default 3) so they arrive in time, and heating phrases in those seconds are spoken after it.
 - `MSG=""` silences that event for this print.
 - In the slicer, write `%p` for the percentage, because `{}` belongs to the slicer's own placeholders.
-- You can use the slicer's placeholders in the phrase. In OrcaSlicer, for example: `VOICE_SET EVENT=complete MSG="[input_filename_base] is ready"`.
+- You can use the slicer's placeholders in the phrase. In OrcaSlicer, for example: `VOICE EVENT=complete MSG="[input_filename_base] is ready"`.
 
 **Say something at a specific moment** with `SAY`, for example in the *Layer change G-code*:
 
@@ -212,12 +212,19 @@ SAY MSG="Nozzle hot"
 | `PLAY_SOUND FILE=done` | plays a sound from a `voice_sounds` folder (or a file: `FILE=my.mp3`) |
 | `SAY_REPEAT SEC=60 MSG="text"` | repeats until `SAY_STOP` or the print resumes |
 | `SAY_STOP` | stops the repetition |
-| `VOICE_SET EVENT=... MSG="..."` | phrase for an automatic event, for this print |
-| `VOICE_RESET` | back to the phrases in `Voice_Messages.cfg` |
-| `VOICE_VOLUME VOLUME=70` | volume 0..100 for voice and sounds. Applied at once, saved in `Voice_Settings.cfg`, and a sample phrase is spoken. Without `VOLUME` it shows the current value |
-| `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in `Voice_Settings.cfg`, and a sample phrase is spoken. Without `SPEED` it shows the current value |
-| `VOICE_OFF` / `VOICE_ON` | mute / unmute (errors are always spoken) |
-| `VOICE_TEST` | speaks the test phrase (`variable_test` in `Voice_Messages.cfg`) |
+
+Everything else is one command, `VOICE`, with parameters (one button in Mainsail's Macros panel):
+
+| Command | Does |
+|---|---|
+| `VOICE` | speaks the test phrase (`variable_test` in `Voice_Messages.cfg`) and shows volume, speed and on/off in the console |
+| `VOICE VOLUME=70` | volume 0..100 for voice and sounds. Applied at once, saved in `Voice_Settings.cfg`, and a sample phrase is spoken |
+| `VOICE SPEED=1.6` | speaking speed: 1.0 normal, higher = slower. Same as `VOLUME`. Both together: `VOICE VOLUME=70 SPEED=1.6` |
+| `VOICE MUTE=1` / `VOICE MUTE=0` | mute / unmute (errors are always spoken) |
+| `VOICE EVENT=complete MSG="..."` | phrase for an automatic event, for this print. `MSG=""` silences it |
+| `VOICE RESET=1` | back to the phrases in `Voice_Messages.cfg` |
+
+Klipper only accepts `NAME=value` parameters, so it is `VOICE MUTE=1`, not `VOICE OFF`.
 
 **Two rules:**
 
@@ -273,9 +280,9 @@ Before using it, fill in `Voice_Settings.cfg`:
 | Problem | Fix |
 |---|---|
 | No sound | `aplay -l` to see the card; `alsamixer` (F6 picks the card, M unmutes); `sudo alsactl store` |
-| The voice says nothing | `journalctl -u klipper-voice -f` and type `VOICE_TEST`; the log shows every event and phrase |
+| The voice says nothing | `journalctl -u klipper-voice -f` and type `VOICE`; the log shows every event and phrase |
 | `RESPOND` error | `[respond]` is missing; `Voice.cfg` already includes it, check `[include Voice/Voice.cfg]` |
-| Voice too quiet / too loud | `variable_volume` in `Voice_Settings.cfg`, or `VOICE_VOLUME VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
+| Voice too quiet / too loud | `variable_volume` in `Voice_Settings.cfg`, or `VOICE VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
 | A pop or noise now and then | Intel sound cards power down when idle and pop when they wake up. `install.sh` turns that off (`/etc/modprobe.d/klipper-voice.conf`); run it again on older installs |
 | Robotic voice | piper voice missing or failed to load: see the log, run `./install.sh -v <voice>` |
 | Old phrases after a change | `Voice_Messages.cfg`: Save & Restart (Klipper). `klipper-voice.conf`: `sudo systemctl restart klipper-voice`; `pgrep -af klipper_voice.py` must show a single process |
