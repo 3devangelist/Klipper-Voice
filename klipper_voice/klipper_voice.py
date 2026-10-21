@@ -11,9 +11,10 @@ Connects to Moonraker and:
   - plays sounds from lines starting with "SOUND:"     (PLAY_SOUND macro)
   - obeys "VOICE_CTL:" off | on | stop | test | repeat <sec> <text>
                        | set <event> <text> | reset | speed [value]
+                       | volume [value]
     ("set" lets the slicer's start G-code give any event its own phrase
-     for the current print; "speed" changes length_scale live and saves
-     it in the config file)
+     for the current print; "speed" and "volume" change length_scale and
+     volume live and save them in the config file)
 
 All settings live in ~/printer_data/config/klipper-voice.conf (editable
 from Mainsail/Fluidd). After editing, restart the "klipper-voice" service.
@@ -42,7 +43,7 @@ import wave
 
 import websockets
 
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -71,6 +72,7 @@ DEFAULTS = {
         "engine": "piper",                      # piper | espeak | text
         "model": "~/klipper-voice-voices/voice.onnx",
         "length_scale": "1.2",
+        "volume": "100",                        # 0..100, voice and sounds
         "effects": ("highpass 250 compand 0.05,0.2 "
                     "6:-70,-60,-30,-15,-15,-6,0,-3 -3 -90 0.1 gain -n -1"),
         "espeak": "espeak-ng -v en -s 165 -a 140",
@@ -146,6 +148,7 @@ class KlipperVoice:
 
         self.engine = self.cp.get("voice", "engine").strip().lower()
         self.length_scale = self.cp.getfloat("voice", "length_scale")
+        self.volume = min(100, max(0, self.cp.getint("voice", "volume")))
         # espeak speed (-s, words per minute) follows length_scale changes
         # made with VOICE_SPEED, relative to the values in the config file
         m = re.search(r"-s\s+(\d+)", self.cp.get("voice", "espeak"))
@@ -206,16 +209,25 @@ class KlipperVoice:
             cmd += ["-D", self.device]
         return cmd
 
-    def pipe(self, source, sink):
-        """source | sink, waiting for both to finish."""
-        p1 = subprocess.Popen(source, stdout=subprocess.PIPE,
-                              stderr=subprocess.DEVNULL)
-        p2 = subprocess.Popen(sink, stdin=p1.stdout,
-                              stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL)
-        p1.stdout.close()
-        p2.wait()
-        p1.wait()
+    def pipe(self, *cmds):
+        """cmd1 | cmd2 | ..., waiting for all of them to finish."""
+        procs, prev = [], None
+        for i, cmd in enumerate(cmds):
+            last = i == len(cmds) - 1
+            p = subprocess.Popen(cmd, stdin=prev,
+                                 stdout=subprocess.DEVNULL if last
+                                 else subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL)
+            if prev:
+                prev.close()
+            prev = p.stdout
+            procs.append(p)
+        for p in reversed(procs):
+            p.wait()
+
+    def vol(self):
+        """sox effect for the volume option (100 = as is)."""
+        return ["vol", f"{self.volume / 100:.2f}"]
 
     def play_item(self, item):
         """Runs in a worker thread: plays a sound or speaks a text."""
@@ -229,7 +241,8 @@ class KlipperVoice:
             if self.engine == "text":
                 log(f"[sound] {path}")
                 return
-            self.pipe(["sox", "-q", path, "-t", "wav", "-"], self.aplay())
+            self.pipe(["sox", "-q", path, "-t", "wav", "-"] + self.vol(),
+                      self.aplay())
             return
 
         if self.engine == "text":
@@ -237,12 +250,14 @@ class KlipperVoice:
         elif self.engine == "piper":
             self.synthesize(item)
             self.pipe(["sox", "-q", self.wav, "-t", "wav", "-"]
-                      + self.effects, self.aplay())
+                      + self.effects + self.vol(), self.aplay())
         else:
             wpm, ls = self.espeak_base
             speed = ["-s", str(round(wpm * ls / self.length_scale))]
             self.pipe(shlex.split(self.cp.get("voice", "espeak")) + speed
-                      + ["--stdout", item], self.aplay())
+                      + ["--stdout", item],
+                      ["sox", "-q", "-t", "wav", "-", "-t", "wav", "-"]
+                      + self.vol(), self.aplay())
 
     async def speaker(self):
         loop = asyncio.get_running_loop()
@@ -351,6 +366,8 @@ class KlipperVoice:
             log("VOICE_SET overrides cleared")
         elif cmd == "speed":
             self.set_speed(parts[1] if len(parts) > 1 else "")
+        elif cmd == "volume":
+            self.set_volume(parts[1] if len(parts) > 1 else "")
         else:
             log(f"Unknown VOICE_CTL: '{text}'")
 
@@ -375,6 +392,24 @@ class KlipperVoice:
                      f"{' (saved)' if saved else ' (not saved)'}")
         self.request(self.test_items())
 
+    def set_volume(self, value):
+        """VOICE_VOLUME: like set_speed, for the volume (0..100)."""
+        if not value:
+            self.console(f"Voice volume: {self.volume} (0..100)")
+            return
+        try:
+            volume = round(float(value))
+        except ValueError:
+            self.console(f"VOICE_VOLUME: invalid value '{value}'")
+            return
+        self.volume = min(100, max(0, volume))
+        saved = self.save_option("voice", "volume", str(self.volume))
+        log(f"Volume set to {self.volume}"
+            f"{'' if saved else ' (not saved to the config file)'}")
+        self.console(f"Voice volume: {self.volume}"
+                     f"{' (saved)' if saved else ' (not saved)'}")
+        self.request(self.test_items())
+
     def test_items(self):
         """VOICE_TEST phrase: "test", else "startup", else a fixed one."""
         return (items_of(self.cp.get("general", "test"))
@@ -383,23 +418,28 @@ class KlipperVoice:
 
     def save_option(self, section, key, value):
         """Rewrites "key = ..." inside [section] of the config file, keeping
-        everything else (comments included). Returns True if saved."""
+        everything else (comments included); adds the line right after
+        [section] if the key is not there yet. Returns True if saved."""
         if not self.conf_file:
             return False
         try:
             with open(self.conf_file, encoding="utf-8") as f:
                 lines = f.readlines()
-            current = None
+            current, header = None, None
             for i, line in enumerate(lines):
                 head = re.match(r"\s*\[([^\]]+)\]", line)
                 if head:
                     current = head.group(1).strip()
+                    if current == section:
+                        header = i
                 elif current == section and re.match(
                         rf"\s*{re.escape(key)}\s*[=:]", line):
                     lines[i] = f"{key} = {value}\n"
                     break
             else:
-                return False
+                if header is None:
+                    return False
+                lines.insert(header + 1, f"{key} = {value}\n")
             with open(self.conf_file, "w", encoding="utf-8") as f:
                 f.writelines(lines)
             return True

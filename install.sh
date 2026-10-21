@@ -103,6 +103,15 @@ for ctl in Master Speaker PCM Headphone; do
   amixer -q sset "$ctl" 100% unmute 2>/dev/null || true
 done
 sudo alsactl store 2>/dev/null || true
+# Intel HDA cards power down after a few idle seconds and "pop" when they
+# wake up for the next message: keep them powered.
+if [ -e /sys/module/snd_hda_intel/parameters/power_save ]; then
+  echo "options snd_hda_intel power_save=0 power_save_controller=N" | \
+    sudo tee /etc/modprobe.d/klipper-voice.conf >/dev/null
+  echo 0 | sudo tee /sys/module/snd_hda_intel/parameters/power_save >/dev/null
+  echo N | sudo tee /sys/module/snd_hda_intel/parameters/power_save_controller >/dev/null 2>&1 || true
+  green "Sound card power saving off (no pops between messages)."
+fi
 aplay -l 2>/dev/null | grep -E '^card' || yellow "Warning: aplay found no sound card."
 
 # ---------------------------------------------------------------------

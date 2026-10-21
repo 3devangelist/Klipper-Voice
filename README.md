@@ -60,7 +60,7 @@ Options for unattended installs:
 The installer:
 
 1. installs `alsa-utils`, `espeak-ng`, `sox` and `python3-venv`;
-2. unmutes the sound card and saves the volume;
+2. unmutes the sound card, saves the volume and, on Intel cards, turns off the power saving that makes them pop;
 3. creates the Python environment `~/klipper-voice-env` with piper;
 4. downloads the voice to `~/klipper-voice-voices/`. If the download fails, the service falls back to espeak;
 5. links `~/printer_data/config/Voice` → `~/Klipper-Voice/Configuration`;
@@ -173,6 +173,7 @@ SAY MSG="Nozzle hot"
 | `SAY_STOP` | stops the repetition |
 | `VOICE_SET EVENT=... MSG="..."` | phrase for an automatic event, for this print |
 | `VOICE_RESET` | back to the phrases in the conf |
+| `VOICE_VOLUME VOLUME=70` | volume 0..100 for voice and sounds. Applied at once, saved in the conf, and a sample phrase is spoken. Without `VOLUME` it shows the current value |
 | `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in the conf, and a sample phrase is spoken. Without `SPEED` it shows the current value |
 | `VOICE_OFF` / `VOICE_ON` | mute / unmute (errors are always spoken) |
 | `VOICE_TEST` | speaks the test phrase (`test` in the conf) |
@@ -225,7 +226,8 @@ Before using it, fill in `Voice_Settings.cfg`:
 | No sound | `aplay -l` to see the card; `alsamixer` (F6 picks the card, M unmutes); `sudo alsactl store` |
 | The voice says nothing | `journalctl -u klipper-voice -f` and type `VOICE_TEST`; the log shows every event and phrase |
 | `RESPOND` error | `[respond]` is missing; `Voice.cfg` already includes it, check `[include Voice/Voice.cfg]` |
-| Voice too quiet | check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
+| Voice too quiet / too loud | `VOICE_VOLUME VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
+| A pop or noise now and then | Intel sound cards power down when idle and pop when they wake up. `install.sh` turns that off (`/etc/modprobe.d/klipper-voice.conf`); run it again on older installs |
 | Robotic voice | piper voice missing or failed to load: see the log, run `./install.sh -v <voice>` |
 | Old phrases after a config change | `sudo systemctl restart klipper-voice`; `pgrep -af klipper_voice.py` must show a single process |
 | Sound on the wrong output (e.g. HDMI) | `device = plughw:1,0` in the conf (numbers from `aplay -l`) |

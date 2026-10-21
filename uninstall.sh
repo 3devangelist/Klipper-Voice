@@ -9,7 +9,7 @@ PRINTER_DATA="${1:-$HOME/printer_data}"
 SERVICE="klipper-voice"
 
 sudo systemctl disable --now "$SERVICE" 2>/dev/null || true
-sudo rm -f "/etc/systemd/system/${SERVICE}.service"
+sudo rm -f "/etc/systemd/system/${SERVICE}.service" /etc/modprobe.d/klipper-voice.conf
 sudo systemctl daemon-reload
 pkill -f klipper_voice.py 2>/dev/null || true
 
