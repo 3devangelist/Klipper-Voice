@@ -2,28 +2,56 @@
 
 **English** | [Português](MANUAL.pt.md)
 
-This manual shows how to use Klipper-Voice day to day from Mainsail. To install it, see the [README](README.md). Everything here is done from the browser; you do not need SSH.
+This manual shows how to install Klipper-Voice and use it day to day from Mainsail. Once installed, everything is done from the browser; you do not need SSH.
 
 > [!WARNING]
 > **Still to be tested.** The screenshots come from the only setup tested so far: an x86 mini PC with Debian 13 and Mainsail. Raspberry Pi and Fluidd have not been tested yet; in Fluidd the menus have other names, but the files are the same. Only the Portuguese (Portugal) phrases were checked by a native speaker; the other languages were written with AI help. Corrections are welcome in an [issue](https://github.com/3devangelist/Klipper-Voice/issues).
 
 ## Contents
 
-1. [What you will hear](#1-what-you-will-hear)
-2. [Test the voice](#2-test-the-voice)
-3. [Where everything is](#3-where-everything-is)
-4. [Change what the printer says](#4-change-what-the-printer-says)
-5. [Volume and speed](#5-volume-and-speed)
-6. [Your own sounds](#6-your-own-sounds)
-7. [Phrases from the slicer and your macros](#7-phrases-from-the-slicer-and-your-macros)
-8. [Example macros](#8-example-macros)
-9. [The macro buttons](#9-the-macro-buttons)
-10. [Restart the voice](#10-restart-the-voice)
-11. [Updates](#11-updates)
-12. [Voice-guided bed leveling](#12-voice-guided-bed-leveling)
-13. [If something is wrong](#13-if-something-is-wrong)
+1. [Installation](#1-installation)
+2. [What you will hear](#2-what-you-will-hear)
+3. [Test the voice](#3-test-the-voice)
+4. [Where everything is](#4-where-everything-is)
+5. [Change what the printer says](#5-change-what-the-printer-says)
+6. [Volume and speed](#6-volume-and-speed)
+7. [Your own sounds](#7-your-own-sounds)
+8. [Phrases from the slicer and your macros](#8-phrases-from-the-slicer-and-your-macros)
+9. [Example macros](#9-example-macros)
+10. [The macro buttons](#10-the-macro-buttons)
+11. [Restart the voice](#11-restart-the-voice)
+12. [Updates](#12-updates)
+13. [Voice-guided bed leveling](#13-voice-guided-bed-leveling)
+14. [If something is wrong](#14-if-something-is-wrong)
 
-## 1. What you will hear
+## 1. Installation
+
+In short; the full step by step, with every option, is in the [README](README.md#installation).
+
+1. **Log in to the printer over SSH** and run:
+
+   ```bash
+   cd ~
+   git clone https://github.com/3devangelist/Klipper-Voice.git
+   cd Klipper-Voice
+   ./install.sh
+   ```
+
+   The installer asks for the language and, once, for the `sudo` password.
+
+2. **Add to `printer.cfg`:**
+
+   ```ini
+   [include Voice/Voice.cfg]
+   [include Voice_Messages.cfg]
+   [include Voice_Settings.cfg]
+   ```
+
+3. **Click SAVE & RESTART** and type `VOICE` in the console (section 3). If you hear the test phrase, you are done.
+
+4. **To update from Mainsail** (optional, but recommended), add to `moonraker.conf` the `[update_manager klipper-voice]` block that the installer prints at the end, also in the [README](README.md#after-installing-once).
+
+## 2. What you will hear
 
 Once installed, the printer speaks on its own. You do not have to change any macro.
 
@@ -41,15 +69,31 @@ Once installed, the printer speaks on its own. You do not have to change any mac
 
 Before each message you hear a short **intro call** (a shopping-centre "ding-dong"), so you know something is coming. It is not played when messages come one right after the other, for example during bed leveling.
 
-## 2. Test the voice
+## 3. Test the voice
 
 Open **Console** and type **`VOICE`**. The printer says its test phrase, and the console shows the volume, the speed and whether the voice is on.
 
-`VOICE` is the only command you need to control the voice; everything else is a parameter of it (sections 5 and 7).
+`VOICE` is the only command you need to control the voice; everything else is a parameter of it (sections 6 and 8).
 
 ![Console with the voice commands](docs/images/console-voice-commands.png)
 
-## 3. Where everything is
+**Hear each sound.** With `SAY` you can put a sound before any phrase: `sound:folder | text` plays a sound from the `voice_sounds/folder/` folder, then speaks the text. Paste these three into the console, one at a time, to hear the printer's three sounds:
+
+```
+SAY MSG="sound:introcall | Homing"
+SAY MSG="sound:pause | Job cancelled"
+SAY MSG="sound:done | Job finished successfully"
+```
+
+| Command | You hear |
+|---|---|
+| `sound:introcall` | the attention "ding-dong", then "Homing" |
+| `sound:pause` | the sound for when the printer needs you, then "Job cancelled" |
+| `sound:done` | the end sound, then "Job finished successfully" |
+
+It is also the best way to try a sound of your own after uploading it to a folder (section 7). The same `sound:… | …` writing works in the phrases of `Voice_Messages.cfg` and in your macros (section 9).
+
+## 4. Where everything is
 
 Open **Machine**. Klipper-Voice uses these files and folders, next to `printer.cfg`:
 
@@ -65,7 +109,7 @@ Open **Machine**. Klipper-Voice uses these files and folders, next to `printer.c
 
 On the right, **Update Manager** shows `klipper-voice`, so you can update it like Klipper and Mainsail.
 
-## 4. Change what the printer says
+## 5. Change what the printer says
 
 1. In **Machine**, click **`Voice_Messages.cfg`**.
 2. Change the text **between the quotes**.
@@ -87,7 +131,7 @@ The bed leveling phrases are at the end of the same file.
 > [!CAUTION]
 > **A missing quote stops Klipper.** `Voice_Messages.cfg` is read by Klipper like `printer.cfg`, so a broken line, such as a missing quote, keeps Klipper from starting until it is fixed. Klipper shows the file and the line with the problem: open `Voice_Messages.cfg` again, fix that line, then click **SAVE & RESTART**. This is the price of keeping every phrase in one simple file you can edit from Mainsail.
 
-## 5. Volume and speed
+## 6. Volume and speed
 
 They are at the top of **`Voice_Settings.cfg`**:
 
@@ -108,9 +152,9 @@ VOICE VOLUME=70 SPEED=1.6
 
 The change is applied at once and the printer says its test phrase, so you hear the result. The value is also saved in `Voice_Settings.cfg`, so it stays after a restart.
 
-**Still hard to understand?** Every speaker is different. In `klipper-voice.conf`, the `effects` line under `[voice]` sets how the voice is processed, and the file comes with four options written in the comments (light, small speaker, clear consonants, pure). Swap the line for another option, then restart the voice (section 10). The [README](README.md#sound-processing-make-the-voice-clear-on-your-speaker) explains how to compare them over SSH.
+**Still hard to understand?** Every speaker is different. In `klipper-voice.conf`, the `effects` line under `[voice]` sets how the voice is processed, and the file comes with four options written in the comments (light, small speaker, clear consonants, pure). Swap the line for another option, then restart the voice (section 11). The [README](README.md#sound-processing-make-the-voice-clear-on-your-speaker) explains how to compare them over SSH.
 
-## 6. Your own sounds
+## 7. Your own sounds
 
 `voice_sounds/` has one folder per sound:
 
@@ -135,7 +179,7 @@ To change a sound:
 - An **empty folder** plays no sound, but the phrase is still spoken.
 - MIDI files (`.mid`) are not supported. Convert them to mp3 first.
 
-## 7. Phrases from the slicer and your macros
+## 8. Phrases from the slicer and your macros
 
 Your slicer's custom G-code, and your own macros, can talk too.
 
@@ -165,14 +209,14 @@ VOICE EVENT=progress MSG="%p percent of the bracket"
 | `SAY_REPEAT SEC=60 MSG="Filament needed"` | repeats until `SAY_STOP`, or until a print starts or resumes |
 | `SAY_STOP` | stops the repetition |
 | `VOICE` | test phrase + volume, speed and on/off in the console |
-| `VOICE VOLUME=70` / `VOICE SPEED=1.6` | volume / speed (section 5) |
+| `VOICE VOLUME=70` / `VOICE SPEED=1.6` | volume / speed (section 6) |
 | `VOICE MUTE=1` / `VOICE MUTE=0` | mutes / unmutes the voice (errors are always spoken) |
 | `VOICE EVENT=complete MSG="..."` | own phrase for an event, for this print |
 | `VOICE RESET=1` | cancels the `VOICE EVENT=` phrases |
 
 Klipper only accepts `NAME=value` parameters, so it is `VOICE MUTE=1`, not `VOICE OFF`.
 
-## 8. Example macros
+## 9. Example macros
 
 Copy these into your own macros file (for example `macros.cfg`), never into the `Voice/` folder. Change the phrases to your language, then **SAVE & RESTART**. The automatic events (print start, heating, pause, end…) are already spoken: do not add `SAY` for them, or you will hear them twice.
 
@@ -269,13 +313,13 @@ VOICE EVENT=complete MSG="[input_filename_base] is ready"
 
 Need help hooking the voice into your own macros? [PROMPT_AI.md](PROMPT_AI.md) has a ready-made prompt to paste into your AI assistant.
 
-## 9. The macro buttons
+## 10. The macro buttons
 
 In **Dashboard → Macros** the voice has one **VOICE** button. Click it for the test phrase; click its arrow to fill in **VOLUME**, **SPEED**, **MUTE**, **EVENT**, **MSG** or **RESET**. `SAY`, `PLAY_SOUND`, `SAY_REPEAT` and `SAY_STOP` have their own buttons.
 
 ![The macro buttons](docs/images/macros-panel.png)
 
-## 10. Restart the voice
+## 11. Restart the voice
 
 Click the **power** icon (top right) → **Service Control → Klipper-voice** → restart (↻).
 
@@ -283,11 +327,11 @@ Click the **power** icon (top right) → **Service Control → Klipper-voice** �
 
 You only need this after editing `klipper-voice.conf`. For `Voice_Messages.cfg` and `Voice_Settings.cfg`, **SAVE & RESTART** is enough.
 
-## 11. Updates
+## 12. Updates
 
 In **Machine → Update Manager**, `klipper-voice` is updated like Klipper and Mainsail. Your files (`Voice_Messages.cfg`, `Voice_Settings.cfg`, `klipper-voice.conf` and `voice_sounds/`) are never overwritten.
 
-## 12. Voice-guided bed leveling
+## 13. Voice-guided bed leveling
 
 This is only for printers with **manual bed screws and a probe**. Setting it up is explained in the [README](README.md#optional-add-on-voice-guided-bed-leveling).
 
@@ -296,15 +340,15 @@ This is only for printers with **manual bed screws and a probe**. Setting it up 
 3. After two "OK" in a row it moves to the next screw by itself, and at the end it checks every screw again.
 4. **BED LEVEL VOICE STOP** aborts at any time.
 
-## 13. If something is wrong
+## 14. If something is wrong
 
 | Problem | What to do |
 |---|---|
-| It says nothing | Type `VOICE`. If there is still silence, restart the voice (section 10) and check the speaker volume |
+| It says nothing | Type `VOICE`. If there is still silence, restart the voice (section 11) and check the speaker volume |
 | A phrase did not change | Did you click **SAVE & RESTART**? Check the quotes and that there is no `;` or `#` |
 | Klipper shows an error after editing | A quote is probably missing. Open the file again and fix that line |
 | Too loud / too quiet | `VOICE VOLUME=…` |
-| Hard to understand, harsh or muffled | another `effects` option in `klipper-voice.conf` (section 5) |
+| Hard to understand, harsh or muffled | another `effects` option in `klipper-voice.conf` (section 6) |
 | Too fast / too slow | `VOICE SPEED=…` |
 
 More cases are in the [README](README.md#troubleshooting).

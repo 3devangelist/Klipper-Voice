@@ -2,34 +2,54 @@
 
 [English](MANUAL.md) | **Português**
 
-Este manual mostra como usar o Klipper-Voice no dia a dia a partir do Mainsail. Para o instalar, vê o [README](README.pt.md). Tudo o que está aqui faz-se no browser; não precisas de SSH.
+Este manual mostra como instalar o Klipper-Voice e usá-lo no dia a dia a partir do Mainsail. Depois de instalado, tudo se faz no browser; não precisas de SSH.
 
 > [!WARNING]
 > **Ainda por testar.** As imagens vêm da única máquina testada até agora: um mini PC x86 com Debian 13 e Mainsail. O Raspberry Pi e o Fluidd ainda não foram testados; no Fluidd os menus têm outros nomes, mas os ficheiros são os mesmos. Só as frases em português de Portugal foram revistas por alguém nativo; as outras línguas foram escritas com ajuda de IA. As correções são bem-vindas num [issue](https://github.com/3devangelist/Klipper-Voice/issues).
 
 ## Índice
 
-1. [O que vais ouvir](#1-o-que-vais-ouvir)
-2. [Testar a voz](#2-testar-a-voz)
-3. [Onde está cada coisa](#3-onde-está-cada-coisa)
-4. [Mudar o que a impressora diz](#4-mudar-o-que-a-impressora-diz)
-5. [Volume e velocidade](#5-volume-e-velocidade)
-6. [Os teus próprios sons](#6-os-teus-próprios-sons)
-7. [Frases a partir do slicer e das tuas macros](#7-frases-a-partir-do-slicer-e-das-tuas-macros)
-8. [Macros de exemplo](#8-macros-de-exemplo)
-9. [Os botões das macros](#9-os-botões-das-macros)
-10. [Reiniciar a voz](#10-reiniciar-a-voz)
-11. [Atualizações](#11-atualizações)
-12. [Nivelar a cama por voz](#12-nivelar-a-cama-por-voz)
-13. [Se algo não estiver bem
-    
-    ](#13-se-algo-não-estiver-bem)
+1. [Instalação](#1-instalação)
+2. [O que vais ouvir](#2-o-que-vais-ouvir)
+3. [Testar a voz](#3-testar-a-voz)
+4. [Onde está cada coisa](#4-onde-está-cada-coisa)
+5. [Mudar o que a impressora diz](#5-mudar-o-que-a-impressora-diz)
+6. [Volume e velocidade](#6-volume-e-velocidade)
+7. [Os teus próprios sons](#7-os-teus-próprios-sons)
+8. [Frases a partir do slicer e das tuas macros](#8-frases-a-partir-do-slicer-e-das-tuas-macros)
+9. [Macros de exemplo](#9-macros-de-exemplo)
+10. [Os botões das macros](#10-os-botões-das-macros)
+11. [Reiniciar a voz](#11-reiniciar-a-voz)
+12. [Atualizações](#12-atualizações)
+13. [Nivelar a cama por voz](#13-nivelar-a-cama-por-voz)
+14. [Se algo não estiver bem](#14-se-algo-não-estiver-bem)
 
 ## 1. Instalação
 
-"Caude coloca informação simplificada e manda para a pagina incial"
+Em resumo; o passo a passo completo, com todas as opções, está no [README](README.pt.md#instalação).
 
-# 
+1. **Entra na impressora por SSH** e corre:
+
+   ```bash
+   cd ~
+   git clone https://github.com/3devangelist/Klipper-Voice.git
+   cd Klipper-Voice
+   ./install.sh
+   ```
+
+   O instalador pergunta a língua (**8** = Português de Portugal) e pede a password do `sudo` uma vez.
+
+2. **Acrescenta ao `printer.cfg`:**
+
+   ```ini
+   [include Voice/Voice.cfg]
+   [include Voice_Messages.cfg]
+   [include Voice_Settings.cfg]
+   ```
+
+3. **Clica em SAVE & RESTART** e escreve `VOICE` na consola (secção 3). Se ouvires a frase de teste, está pronto.
+
+4. **Para atualizar pelo Mainsail** (opcional, mas recomendado), acrescenta ao `moonraker.conf` o bloco `[update_manager klipper-voice]` que o instalador mostra no fim, e que também está no [README](README.pt.md#depois-de-instalar-uma-vez).
 
 ## 2. O que vais ouvir
 
@@ -51,26 +71,25 @@ Antes de cada mensagem ouves um pequeno **introcall** (o "ding-dong" dos centros
 
 Abre a **Console** e escreve **`VOICE`**. A impressora diz a frase de teste, e a consola mostra o volume, a velocidade e se a voz está ligada.
 
-O `VOICE` é o único comando de que precisas para controlar a voz; tudo o resto são parâmetros dele (secções 5 e 7).
-
-"claude" compoem e completa
-
-
-
-SAY MSG="sound:introcall | Obtenção de zero"
-
-
-SAY MSG="sound:pause | Trabalho Cancelado"
-
-SAY MSG="sound:done | Trabalho Finalizado com Sucesso"
-
-
-
-
-
-
+O `VOICE` é o único comando de que precisas para controlar a voz; tudo o resto são parâmetros dele (secções 6 e 8).
 
 ![Consola com os comandos de voz](docs/images/console-voice-commands.png)
+
+**Ouvir cada som.** Com o `SAY` podes pôr um som antes de qualquer frase: `sound:pasta | texto` toca um som da pasta `voice_sounds/pasta/` e depois diz o texto. Cola estes três na consola, um de cada vez, para ouvires os três sons da impressora:
+
+```
+SAY MSG="sound:introcall | Obtenção de zero"
+SAY MSG="sound:pause | Trabalho cancelado"
+SAY MSG="sound:done | Trabalho finalizado com sucesso"
+```
+
+| Comando | Ouves |
+|---|---|
+| `sound:introcall` | o "ding-dong" de atenção, e "Obtenção de zero" |
+| `sound:pause` | o som de quando a impressora precisa de ti, e "Trabalho cancelado" |
+| `sound:done` | o som de fim, e "Trabalho finalizado com sucesso" |
+
+É também a melhor forma de experimentar um som teu, depois de o carregares para uma pasta (secção 7). A mesma escrita `sound:… | …` funciona nas frases do `Voice_Messages.cfg` e nas tuas macros (secção 9).
 
 ## 4. Onde está cada coisa
 
@@ -131,7 +150,7 @@ VOICE VOLUME=70 SPEED=1.6
 
 A mudança é aplicada logo e a impressora diz a frase de teste, para ouvires o resultado. O valor também fica gravado no `Voice_Settings.cfg`, por isso mantém-se depois de reiniciar.
 
-**Ainda se percebe mal?** Cada coluna é diferente. No `klipper-voice.conf`, a linha `effects` em `[voice]` define como a voz é processada, e o ficheiro traz quatro opções escritas nos comentários (leve, coluna pequena, consoantes claras, pura). Troca a linha por outra opção e reinicia a voz (secção 10). O [README](README.pt.md#processamento-do-som-voz-clara-na-tua-coluna) explica como compará-las por SSH.
+**Ainda se percebe mal?** Cada coluna é diferente. No `klipper-voice.conf`, a linha `effects` em `[voice]` define como a voz é processada, e o ficheiro traz quatro opções escritas nos comentários (leve, coluna pequena, consoantes claras, pura). Troca a linha por outra opção e reinicia a voz (secção 11). O [README](README.pt.md#processamento-do-som-voz-clara-na-tua-coluna) explica como compará-las por SSH.
 
 ## 7. Os teus próprios sons
 
@@ -188,7 +207,7 @@ VOICE EVENT=progress MSG="%p por cento do suporte"
 | `SAY_REPEAT SEC=60 MSG="Falta filamento"` | repete até `SAY_STOP`, ou até uma impressão começar ou continuar  |
 | `SAY_STOP`                                | para a repetição                                                  |
 | `VOICE`                                   | frase de teste + volume, velocidade e ligado/desligado na consola |
-| `VOICE VOLUME=70` / `VOICE SPEED=1.6`     | volume / velocidade (secção 5)                                    |
+| `VOICE VOLUME=70` / `VOICE SPEED=1.6`     | volume / velocidade (secção 6)                                    |
 | `VOICE MUTE=1` / `VOICE MUTE=0`           | desliga / liga a voz (os erros são sempre ditos)                  |
 | `VOICE EVENT=complete MSG="..."`          | frase própria para um evento, nesta impressão                     |
 | `VOICE RESET=1`                           | cancela as frases do `VOICE EVENT=`                               |
@@ -323,11 +342,11 @@ Só serve para impressoras com **parafusos manuais na cama e uma sonda**. A conf
 
 | Problema                               | O que fazer                                                                                   |
 | -------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Não diz nada                           | Escreve `VOICE`. Se continuar em silêncio, reinicia a voz (secção 10) e vê o volume da coluna |
+| Não diz nada                           | Escreve `VOICE`. Se continuar em silêncio, reinicia a voz (secção 11) e vê o volume da coluna |
 | Uma frase não mudou                    | Clicaste em **SAVE & RESTART**? Confirma as aspas e que não há `;` nem `#`                    |
 | O Klipper dá erro depois de editares   | Provavelmente falta uma aspa. Abre o ficheiro outra vez e corrige essa linha                  |
 | Muito alto / muito baixo               | `VOICE VOLUME=…`                                                                              |
-| Difícil de perceber, áspera ou abafada | outra opção de `effects` no `klipper-voice.conf` (secção 5)                                   |
+| Difícil de perceber, áspera ou abafada | outra opção de `effects` no `klipper-voice.conf` (secção 6)                                   |
 | Muito rápido / muito lento             | `VOICE SPEED=…`                                                                               |
 
 Há mais casos no [README](README.pt.md#resolução-de-problemas).
