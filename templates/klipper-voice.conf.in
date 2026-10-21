@@ -1,0 +1,84 @@
+# =====================================================================
+#  klipper-voice.conf - voice service settings (Klipper-Voice)
+#  Language: @NAME@
+#
+#  This file is YOURS: install.sh creates it once in
+#  ~/printer_data/config/ and never overwrites it. Rewrite the phrases
+#  as you like. After editing, restart the "klipper-voice" service
+#  (Mainsail/Fluidd: services menu | SSH: sudo systemctl restart klipper-voice)
+# =====================================================================
+
+[general]
+# Moonraker address (usually no need to change)
+moonraker = ws://127.0.0.1:7125/websocket
+# Phrase spoken at startup and by VOICE_TEST (empty = silent at startup)
+startup = @STARTUP@
+# Max phrases waiting to be spoken; older ones are dropped beyond this
+queue = 3
+
+[voice]
+# piper  = natural voice (recommended)
+# espeak = robotic voice, lighter
+# text   = no audio, only writes to the log (testing without a speaker)
+engine = piper
+# Piper voice model (installed: @VOICE@)
+model = ~/klipper-voice-voices/voice.onnx
+# 1.0 = normal speed; higher = slower
+length_scale = @LENGTH_SCALE@
+# Sound processing (sox) for small speakers:
+# cut the bass, compress and normalise as loud as possible without clipping
+effects = highpass 250 compand 0.05,0.2 6:-70,-60,-30,-15,-15,-6,0,-3 -3 -90 0.1 gain -n -1
+# espeak command (language, speed, volume) - fallback if piper fails
+espeak = espeak-ng -v @ESPEAK@ -s 165 -a 140
+# Sound card for aplay (empty = default). E.g. plughw:0,0
+# List cards with: aplay -l
+device =
+
+[sounds]
+# Sounds folder (wav, mp3, ogg...). Inside the config folder so you can
+# upload files from Mainsail/Fluidd.
+folder = ~/printer_data/config/voice_sounds
+
+[events]
+# Spoken automatically - no macro changes needed.
+# Each event: texts and sounds ("sound:file.wav") separated by "|".
+# Empty = silent.
+# Any event can also get its own phrase for one print from the slicer's
+# start G-code:   VOICE_SET EVENT=complete MSG="Your phrase"
+start = @EV_START@
+# Seconds "start" waits, so VOICE_SET lines in the slicer's start G-code
+# arrive in time (heating phrases in the meantime are spoken after it)
+start_delay = 3
+nozzle_heating = @EV_NOZZLE_HEATING@
+nozzle_hot = @EV_NOZZLE_HOT@
+bed_heating = @EV_BED_HEATING@
+bed_hot = @EV_BED_HOT@
+# Progress: {p} is replaced by the percentage
+progress = @EV_PROGRESS@
+# Every how many percent (0 = never)
+progress_step = 10
+# Paused (filament runout, M600 colour change, PAUSE...)
+paused = sound:alert.wav | @EV_PAUSED@
+# Repeat the paused phrase every N minutes until resumed (0 = once)
+paused_repeat_minutes = 5
+resumed = @EV_RESUMED@
+complete = sound:done.wav | @EV_COMPLETE@
+cancelled = @EV_CANCELLED@
+error = sound:error.wav | @EV_ERROR@
+# Klipper stopped (shutdown, "Timer too close", MCU lost...)
+shutdown = sound:error.wav | @EV_SHUTDOWN@
+# yes = also speak Klipper's own error message (in English)
+say_error_message = no
+# Heating is announced only if the target is at least this many degrees
+# above the current temperature (avoids chatter on small changes)
+heating_min_delta = 10
+# "Hot" is announced within this many degrees of the target
+hot_margin = 3
+
+[night]
+# Night mode: silent between "start" and "end"
+enabled = no
+start = 23:00
+end = 08:00
+# yes = errors and shutdowns are spoken even at night
+allow_errors = yes

@@ -1,0 +1,46 @@
+{
+  "name": "English",
+  "voice": "en_US-lessac-medium",
+  "espeak": "en",
+  "length_scale": 1.1,
+  "startup": "Voice ready",
+  "events": {
+    "start": "Print starting",
+    "nozzle_heating": "Nozzle heating",
+    "nozzle_hot": "Nozzle hot",
+    "bed_heating": "Bed heating",
+    "bed_hot": "Bed hot",
+    "progress": "{p} percent complete",
+    "paused": "Printer paused for filament reload or colour change",
+    "resumed": "Resuming print",
+    "complete": "Print complete",
+    "cancelled": "Print cancelled",
+    "error": "Print error",
+    "shutdown": "Warning, Klipper has stopped"
+  },
+  "leveling": {
+    "heating": "Heating the bed",
+    "soaking": "Soaking",
+    "minutes": "minutes",
+    "reference": "Measuring the reference",
+    "screw": "Screw",
+    "tighten": "Tighten",
+    "loosen": "Loosen",
+    "turn": "turn",
+    "turns": "turns",
+    "degrees": "degrees",
+    "and": "and",
+    "ok": "OK",
+    "recheck": "Checking again",
+    "done": "Bed is level",
+    "gave_up": "Stopping here. The bed is not perfect yet",
+    "stopped": "Leveling stopped"
+  },
+  "screw_names": [
+    "front left",
+    "front right",
+    "rear right",
+    "rear left"
+  ],
+  "next_steps": "run BED_MESH_CALIBRATE, SAVE_CONFIG and check your Z offset"
+}

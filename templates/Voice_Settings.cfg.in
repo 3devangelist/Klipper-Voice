@@ -1,10 +1,11 @@
 # =====================================================================
-#  Klipper-Voice - YOUR machine settings
+#  Klipper-Voice - settings for the OPTIONAL bed leveling add-on
+#  Language: @NAME@
 #
-#  This file is yours: install.sh copies it once into
-#  ~/printer_data/config/ and never overwrites it.
-#  Need help filling it in? Use PROMPT_AI.md from the repository with
-#  the AI assistant of your choice.
+#  Only needed if you include Voice/Bed_Level_Voice.cfg (printers with
+#  manual bed screws and a probe). This file is yours: install.sh
+#  creates it once and never overwrites it.
+#  Need help filling it in? Use PROMPT_AI.md from the repository.
 # =====================================================================
 
 [gcode_macro _BLV_CONFIG]
@@ -14,18 +15,18 @@
 #   nozzle X = screw X - probe x_offset
 #   nozzle Y = screw Y - probe y_offset
 # The 1st screw is the reference (never adjusted).
-# Format: [[X, Y, 'name'], ...]   - the name is spoken aloud.
+# Format: [[X, Y, "name"], ...]   - the name is spoken aloud.
 # EXAMPLE - REPLACE WITH THE VALUES MEASURED ON YOUR MACHINE:
-variable_screws: [[30, 30, 'front left'], [200, 30, 'front right'], [200, 200, 'rear right'], [30, 200, 'rear left']]
+variable_screws: [[30, 30, "@SCREW1@"], [200, 30, "@SCREW2@"], [200, 200, "@SCREW3@"], [30, 200, "@SCREW4@"]]
 
 # Screw pitch, mm per turn: M3 = 0.5 | M4 = 0.7 | M5 = 0.8
 variable_pitch: 0.7
-# 1 if "Tighten" actually RAISES the bed on your machine
+# 1 if "@LV_TIGHTEN@" actually RAISES the bed on your machine
 variable_invert: 0
 
 # --- Tuning -----------------------------------------------------------
-variable_tolerance: 0.015       # mm accepted as "OK" (0.015 on M4 ~ 8 degrees)
-variable_oks_needed: 2          # consecutive "OK" readings to move on
+variable_tolerance: 0.015       # mm accepted as OK (0.015 on M4 ~ 8 degrees)
+variable_oks_needed: 2          # consecutive OK readings to move on
 variable_max_passes: 4          # full verification passes
 variable_pause: 4.0             # seconds between readings (time to hear the phrase)
 
@@ -38,23 +39,23 @@ variable_speed_xy: 6000         # mm/min
 variable_speed_z: 900           # mm/min
 
 # Console message at the end (empty = none)
-variable_next_steps: "run BED_MESH_CALIBRATE, SAVE_CONFIG and check your Z offset"
+variable_next_steps: "@NEXT_STEPS@"
 
 # --- Spoken phrases ---------------------------------------------------
-variable_txt_heating: "Heating the bed"
-variable_txt_soaking: "Soaking"
-variable_txt_minutes: "minutes"
-variable_txt_reference: "Measuring the reference"
-variable_txt_screw: "Screw"
-variable_txt_tighten: "Tighten"
-variable_txt_loosen: "Loosen"
-variable_txt_turn: "turn"
-variable_txt_turns: "turns"
-variable_txt_degrees: "degrees"
-variable_txt_and: "and"
-variable_txt_ok: "OK"
-variable_txt_recheck: "Checking again"
-variable_txt_done: "Bed is level"
-variable_txt_gave_up: "Stopping here. The bed is not perfect yet"
-variable_txt_stopped: "Leveling stopped"
+variable_txt_heating: "@LV_HEATING@"
+variable_txt_soaking: "@LV_SOAKING@"
+variable_txt_minutes: "@LV_MINUTES@"
+variable_txt_reference: "@LV_REFERENCE@"
+variable_txt_screw: "@LV_SCREW@"
+variable_txt_tighten: "@LV_TIGHTEN@"
+variable_txt_loosen: "@LV_LOOSEN@"
+variable_txt_turn: "@LV_TURN@"
+variable_txt_turns: "@LV_TURNS@"
+variable_txt_degrees: "@LV_DEGREES@"
+variable_txt_and: "@LV_AND@"
+variable_txt_ok: "@LV_OK@"
+variable_txt_recheck: "@LV_RECHECK@"
+variable_txt_done: "@LV_DONE@"
+variable_txt_gave_up: "@LV_GAVE_UP@"
+variable_txt_stopped: "@LV_STOPPED@"
 gcode:

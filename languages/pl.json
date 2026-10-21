@@ -1,0 +1,46 @@
+{
+  "name": "Polski",
+  "voice": "pl_PL-gosia-medium",
+  "espeak": "pl",
+  "length_scale": 1.1,
+  "startup": "Głos gotowy",
+  "events": {
+    "start": "Rozpoczynam drukowanie",
+    "nozzle_heating": "Dysza się nagrzewa",
+    "nozzle_hot": "Dysza gorąca",
+    "bed_heating": "Stół się nagrzewa",
+    "bed_hot": "Stół gorący",
+    "progress": "{p} procent ukończone",
+    "paused": "Drukarka wstrzymana, uzupełnij filament lub zmień kolor",
+    "resumed": "Wznawiam drukowanie",
+    "complete": "Wydruk zakończony",
+    "cancelled": "Wydruk anulowany",
+    "error": "Błąd drukowania",
+    "shutdown": "Uwaga, Klipper się zatrzymał"
+  },
+  "leveling": {
+    "heating": "Nagrzewam stół",
+    "soaking": "Stabilizacja",
+    "minutes": "minut",
+    "reference": "Mierzę punkt odniesienia",
+    "screw": "Śruba",
+    "tighten": "Dokręć",
+    "loosen": "Poluzuj",
+    "turn": "obrót",
+    "turns": "obroty",
+    "degrees": "stopni",
+    "and": "i",
+    "ok": "Dobrze",
+    "recheck": "Ponowne sprawdzenie",
+    "done": "Stół wypoziomowany",
+    "gave_up": "Kończę tutaj. Jeszcze nie jest idealnie",
+    "stopped": "Poziomowanie przerwane"
+  },
+  "screw_names": [
+    "przód lewy",
+    "przód prawy",
+    "tył prawy",
+    "tył lewy"
+  ],
+  "next_steps": "uruchom BED_MESH_CALIBRATE, SAVE_CONFIG i sprawdź Z offset"
+}

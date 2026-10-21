@@ -1,0 +1,46 @@
+{
+  "name": "Italiano",
+  "voice": "it_IT-paola-medium",
+  "espeak": "it",
+  "length_scale": 1.1,
+  "startup": "Voce pronta",
+  "events": {
+    "start": "Inizio stampa",
+    "nozzle_heating": "Ugello in riscaldamento",
+    "nozzle_hot": "Ugello caldo",
+    "bed_heating": "Piatto in riscaldamento",
+    "bed_hot": "Piatto caldo",
+    "progress": "{p} per cento completato",
+    "paused": "Stampante in pausa per ricarica filamento o cambio colore",
+    "resumed": "Ripresa della stampa",
+    "complete": "Stampa completata",
+    "cancelled": "Stampa annullata",
+    "error": "Errore di stampa",
+    "shutdown": "Attenzione, Klipper si è fermato"
+  },
+  "leveling": {
+    "heating": "Riscaldamento del piatto",
+    "soaking": "Stabilizzazione",
+    "minutes": "minuti",
+    "reference": "Misuro il riferimento",
+    "screw": "Vite",
+    "tighten": "Stringi",
+    "loosen": "Allenta",
+    "turn": "giro",
+    "turns": "giri",
+    "degrees": "gradi",
+    "and": "e",
+    "ok": "Giusto",
+    "recheck": "Nuovo controllo",
+    "done": "Piatto livellato",
+    "gave_up": "Mi fermo qui. Non è ancora perfetto",
+    "stopped": "Livellamento interrotto"
+  },
+  "screw_names": [
+    "anteriore sinistra",
+    "anteriore destra",
+    "posteriore destra",
+    "posteriore sinistra"
+  ],
+  "next_steps": "esegui BED_MESH_CALIBRATE, SAVE_CONFIG e controlla lo Z offset"
+}

@@ -1,0 +1,46 @@
+{
+  "name": "Español",
+  "voice": "es_ES-davefx-medium",
+  "espeak": "es",
+  "length_scale": 1.1,
+  "startup": "Voz lista",
+  "events": {
+    "start": "Empieza la impresión",
+    "nozzle_heating": "Calentando la boquilla",
+    "nozzle_hot": "Boquilla caliente",
+    "bed_heating": "Calentando la cama",
+    "bed_hot": "Cama caliente",
+    "progress": "{p} por ciento completado",
+    "paused": "Impresora en pausa para recargar filamento o cambiar de color",
+    "resumed": "Reanudando la impresión",
+    "complete": "Impresión terminada",
+    "cancelled": "Impresión cancelada",
+    "error": "Error en la impresión",
+    "shutdown": "Atención, Klipper se ha detenido"
+  },
+  "leveling": {
+    "heating": "Calentando la cama",
+    "soaking": "Estabilizando",
+    "minutes": "minutos",
+    "reference": "Midiendo la referencia",
+    "screw": "Tornillo",
+    "tighten": "Aprieta",
+    "loosen": "Afloja",
+    "turn": "vuelta",
+    "turns": "vueltas",
+    "degrees": "grados",
+    "and": "y",
+    "ok": "Correcto",
+    "recheck": "Nueva comprobación",
+    "done": "Cama nivelada",
+    "gave_up": "Me detengo aquí. Todavía no está perfecta",
+    "stopped": "Nivelación detenida"
+  },
+  "screw_names": [
+    "delantero izquierdo",
+    "delantero derecho",
+    "trasero derecho",
+    "trasero izquierdo"
+  ],
+  "next_steps": "ejecuta BED_MESH_CALIBRATE, SAVE_CONFIG y comprueba el Z offset"
+}

@@ -18,19 +18,23 @@ Reply in the language I write to you in. Spoken phrases must be in that language
   - SAY_STOP                        -> stops the repetition
   - VOICE_OFF / VOICE_ON            -> mute / unmute (errors are always spoken)
   - Sounds and text can be combined in SAY_REPEAT: MSG="sound:alert.wav | Filament runout"
-- The service ALREADY announces on its own, without macros: print start, complete, paused, resumed,
-  cancelled and error, plus Klipper shutdowns. Those phrases are in klipper-voice.conf, [events].
-  Do NOT add SAY for those events in macros, or the phrase will be spoken twice.
-- If several messages arrive while it is speaking, only the most recent is spoken next. Consecutive
-  SAY lines with nothing in between are lost: use one message, or put a G4 between them.
+  - VOICE_SET EVENT=<event> MSG="text" -> own phrase for an automatic event during the current print
+    (good for the slicer's start G-code; in the slicer use %p for the progress percentage)
+  - VOICE_RESET                     -> back to the phrases in klipper-voice.conf
+- The service ALREADY announces on its own, without macros: print start, nozzle heating / hot,
+  bed heating / hot, progress every 10 %, paused (repeated every 5 minutes until resumed), resumed,
+  complete, cancelled, error and Klipper shutdowns. Those phrases are in klipper-voice.conf, [events].
+  Do NOT add SAY for those events in macros, or the phrase will be spoken twice. To change them,
+  edit klipper-voice.conf or use VOICE_SET; to replace one with my own SAY lines, empty it in the conf.
+- Phrases are spoken in order; if more than 3 pile up, the oldest are dropped.
 - Voice-guided bed leveling (Voice/Bed_Level_Voice.cfg): BED_LEVEL_VOICE. The machine settings and
   spoken phrases are in [gcode_macro _BLV_CONFIG], file Voice_Settings.cfg.
 
 ## What I want
-1. Hook the voice into my macros where it makes sense, for example:
-   - START_PRINT stages ("Heating the bed", "Meshing", "Starting");
-   - filament runout (runout_gcode of the sensor, or M600): SAY_REPEAT every 60 s;
-   - end of calibrations, filament change.
+1. Hook the voice into my macros and my slicer's custom G-code where it makes sense, for example:
+   - START_PRINT stages that are not automatic events ("Meshing", "Purging");
+   - VOICE_SET lines in the slicer's start G-code to personalise events for each print;
+   - end of calibrations, filament load / unload macros.
 2. Fill in Voice_Settings.cfg for my machine (if I use voice-guided leveling).
 
 ## Before proposing changes, ask me for

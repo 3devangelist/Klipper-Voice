@@ -4,9 +4,9 @@
 #
 #  Usage:  cd ~/Klipper-Voice && ./install.sh [options]
 #
-#  -l LANG    language of the example settings: en | pt   (default: en)
-#  -v VOICE   piper voice (default per language:
-#             en -> en_US-lessac-medium, pt -> pt_PT-tugão-medium)
+#  -l LANG    language: en de es fr it pl pt_BR pt_PT ...
+#             (without -l the installer asks; see languages/*.json)
+#  -v VOICE   other piper voice for that language
 #             list: https://huggingface.co/rhasspy/piper-voices
 #  -c DIR     printer_data folder                (default: ~/printer_data)
 #  -n         do not download a piper voice (espeak only)
@@ -19,7 +19,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PRINTER_DATA="${HOME}/printer_data"
-LANG_CODE="en"
+LANG_CODE=""
 VOICE=""
 NO_VOICE=0
 VENV="${HOME}/klipper-voice-env"
@@ -43,14 +43,38 @@ while getopts "l:v:c:nh" opt; do
   esac
 done
 
-case "$LANG_CODE" in
-  en) : "${VOICE:=en_US-lessac-medium}" ;;
-  pt) : "${VOICE:=pt_PT-tugão-medium}" ;;
-  *)  red "Unknown language '${LANG_CODE}' (use en or pt)."; exit 1 ;;
-esac
+render() { python3 "${REPO}/tools/render_config.py" "$@"; }
+
+# ---------------------------------------------------------------------
+# Language (it picks the voice synthesizer model and the phrases)
+if [ -z "$LANG_CODE" ]; then
+  mapfile -t LANGS < <(render list)
+  if [ -t 0 ]; then
+    echo "Which language should the printer speak?"
+    i=1
+    for l in "${LANGS[@]}"; do
+      IFS=$'\t' read -r code name voice <<<"$l"
+      printf '  %2d) %-22s (%s, voice %s)\n' "$i" "$name" "$code" "$voice"
+      i=$((i + 1))
+    done
+    read -r -p "Number [1]: " choice
+    choice="${choice:-1}"
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#LANGS[@]}" ]; then
+      red "Invalid choice."; exit 1
+    fi
+    LANG_CODE="$(cut -f1 <<<"${LANGS[$((choice - 1))]}")"
+  else
+    LANG_CODE="en"
+  fi
+fi
+if [ ! -f "${REPO}/languages/${LANG_CODE}.json" ]; then
+  red "Unknown language '${LANG_CODE}'. Available: $(render list | cut -f1 | tr '\n' ' ')"
+  exit 1
+fi
+: "${VOICE:=$(render get "$LANG_CODE" voice)}"
+green "Language: ${LANG_CODE} - voice ${VOICE}"
 
 CONFIG="${PRINTER_DATA}/config"
-EXAMPLES="${REPO}/config_examples/${LANG_CODE}"
 
 if [ "$(id -u)" -eq 0 ]; then
   red "Do not run as root. Run as the Klipper user (sudo is requested when needed)."
@@ -83,12 +107,22 @@ aplay -l 2>/dev/null | grep -E '^card' || yellow "Warning: aplay found no sound 
 step "3/7 Python environment (piper + websockets) in ${VENV}"
 [ -d "$VENV" ] || python3 -m venv "$VENV"
 "$VENV/bin/pip" install -q --upgrade pip
-"$VENV/bin/pip" install -q -r "$REPO/requirements.txt"
+# piper needs onnxruntime, which has no build for 32-bit ARM (armv6/armv7):
+# requirements.txt skips it there, and if it still fails we go on with
+# espeak only instead of aborting the whole install.
+if ! "$VENV/bin/pip" install -q -r "$REPO/requirements.txt"; then
+  yellow "Could not install piper on this system ($(uname -m)); installing websockets only."
+  "$VENV/bin/pip" install -q "websockets>=12"
+fi
+if ! "$VENV/bin/python3" -c "import piper" 2>/dev/null; then
+  yellow "piper is not available on this system ($(uname -m)): the service will use espeak."
+  NO_VOICE=1
+fi
 
 # ---------------------------------------------------------------------
 step "4/7 Voice"
 if [ "$NO_VOICE" -eq 1 ]; then
-  yellow "No piper voice (-n). Set 'engine = espeak' in klipper-voice.conf."
+  yellow "No piper voice: the service will use espeak (you may set 'engine = espeak' in klipper-voice.conf)."
 elif [ -s "$VOICES/voice.onnx" ] && [ -s "$VOICES/voice.onnx.json" ] && \
      [ "$(cat "$VOICES/NAME" 2>/dev/null)" = "$VOICE" ]; then
   green "Voice ${VOICE} already installed."
@@ -108,12 +142,17 @@ PY
 )"
   mkdir -p "$VOICES"
   echo "Downloading ${URL}.onnx"
-  curl -fL --progress-bar -o "$VOICES/voice.onnx.tmp" "${URL}.onnx"
-  curl -fsSL -o "$VOICES/voice.onnx.json.tmp" "${URL}.onnx.json"
-  mv "$VOICES/voice.onnx.tmp" "$VOICES/voice.onnx"
-  mv "$VOICES/voice.onnx.json.tmp" "$VOICES/voice.onnx.json"
-  echo "$VOICE" > "$VOICES/NAME"
-  green "Voice ${VOICE} installed (saved as voice.onnx)."
+  if curl -fL --progress-bar -o "$VOICES/voice.onnx.tmp" "${URL}.onnx" && \
+     curl -fsSL -o "$VOICES/voice.onnx.json.tmp" "${URL}.onnx.json"; then
+    mv "$VOICES/voice.onnx.tmp" "$VOICES/voice.onnx"
+    mv "$VOICES/voice.onnx.json.tmp" "$VOICES/voice.onnx.json"
+    echo "$VOICE" > "$VOICES/NAME"
+    green "Voice ${VOICE} installed (saved as voice.onnx)."
+  else
+    rm -f "$VOICES"/*.tmp
+    red "Could not download voice ${VOICE}. The service will use espeak."
+    red "Pick another voice with -v (see https://huggingface.co/rhasspy/piper-voices) and run install.sh again."
+  fi
 fi
 
 # ---------------------------------------------------------------------
@@ -128,9 +167,9 @@ fi
 # User files: only if they do not exist yet
 for f in klipper-voice.conf Voice_Settings.cfg; do
   if [ -e "$CONFIG/$f" ]; then
-    yellow "${f} already exists - kept."
+    yellow "${f} already exists - kept (delete it to recreate it in another language)."
   else
-    cp "$EXAMPLES/$f" "$CONFIG/$f"
+    render render "$LANG_CODE" "$REPO/templates/$f.in" "$CONFIG/$f"
     green "Created ${CONFIG}/${f} (${LANG_CODE})"
   fi
 done
@@ -156,7 +195,7 @@ Wants=moonraker.service
 [Service]
 User=${USER}
 SupplementaryGroups=audio
-ExecStart=${VENV}/bin/python3 ${REPO}/klipper_voice/klipper_voice.py ${CONFIG}/klipper-voice.conf
+ExecStart="${VENV}/bin/python3" "${REPO}/klipper_voice/klipper_voice.py" "${CONFIG}/klipper-voice.conf"
 Restart=always
 RestartSec=5
 Nice=10
@@ -193,8 +232,10 @@ Left for you to do (once):
 
  1. Add to printer.cfg:
       [include Voice/Voice.cfg]
-      [include Voice/Bed_Level_Voice.cfg]   # optional: voice-guided bed leveling
-      [include Voice_Settings.cfg]          # only if you use bed leveling
+
+    Optional add-on (manual bed screws + probe only):
+      [include Voice/Bed_Level_Voice.cfg]
+      [include Voice_Settings.cfg]
 
  2. Restart Klipper and type in the console:  VOICE_TEST
 

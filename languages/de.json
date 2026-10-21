@@ -1,0 +1,46 @@
+{
+  "name": "Deutsch",
+  "voice": "de_DE-thorsten-medium",
+  "espeak": "de",
+  "length_scale": 1.1,
+  "startup": "Stimme bereit",
+  "events": {
+    "start": "Druck startet",
+    "nozzle_heating": "Düse heizt auf",
+    "nozzle_hot": "Düse heiß",
+    "bed_heating": "Bett heizt auf",
+    "bed_hot": "Bett heiß",
+    "progress": "{p} Prozent fertig",
+    "paused": "Drucker pausiert zum Nachladen von Filament oder Farbwechsel",
+    "resumed": "Druck wird fortgesetzt",
+    "complete": "Druck fertig",
+    "cancelled": "Druck abgebrochen",
+    "error": "Druckfehler",
+    "shutdown": "Achtung, Klipper wurde gestoppt"
+  },
+  "leveling": {
+    "heating": "Bett heizt auf",
+    "soaking": "Warte",
+    "minutes": "Minuten",
+    "reference": "Messe die Referenz",
+    "screw": "Schraube",
+    "tighten": "Anziehen",
+    "loosen": "Lösen",
+    "turn": "Umdrehung",
+    "turns": "Umdrehungen",
+    "degrees": "Grad",
+    "and": "und",
+    "ok": "Passt",
+    "recheck": "Neue Prüfung",
+    "done": "Bett ist ausgerichtet",
+    "gave_up": "Ich höre hier auf. Noch nicht perfekt",
+    "stopped": "Ausrichtung abgebrochen"
+  },
+  "screw_names": [
+    "vorne links",
+    "vorne rechts",
+    "hinten rechts",
+    "hinten links"
+  ],
+  "next_steps": "BED_MESH_CALIBRATE ausführen, SAVE_CONFIG und Z-Offset prüfen"
+}

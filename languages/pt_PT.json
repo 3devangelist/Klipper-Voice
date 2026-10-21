@@ -1,0 +1,46 @@
+{
+  "name": "Português (Portugal)",
+  "voice": "pt_PT-tugão-medium",
+  "espeak": "pt",
+  "length_scale": 1.4,
+  "startup": "Voz pronta",
+  "events": {
+    "start": "Impressão a começar",
+    "nozzle_heating": "Bico a aquecer",
+    "nozzle_hot": "Bico quente",
+    "bed_heating": "Cama a aquecer",
+    "bed_hot": "Cama quente",
+    "progress": "{p} por cento concluído",
+    "paused": "Máquina em pausa para recarga de filamento ou troca de cor",
+    "resumed": "A retomar a impressão",
+    "complete": "Impressão terminada",
+    "cancelled": "Impressão cancelada",
+    "error": "Erro na impressão",
+    "shutdown": "Atenção, o Klipper parou"
+  },
+  "leveling": {
+    "heating": "A aquecer a cama",
+    "soaking": "A estabilizar",
+    "minutes": "minutos",
+    "reference": "A medir a referência",
+    "screw": "Parafuso",
+    "tighten": "Aperta",
+    "loosen": "Alivia",
+    "turn": "volta",
+    "turns": "voltas",
+    "degrees": "graus",
+    "and": "e",
+    "ok": "Certo",
+    "recheck": "Nova verificação",
+    "done": "Cama nivelada",
+    "gave_up": "Parei aqui. Ainda não está perfeita",
+    "stopped": "Nivelamento parado"
+  },
+  "screw_names": [
+    "frente esquerda",
+    "frente direita",
+    "fundo direito",
+    "fundo esquerdo"
+  ],
+  "next_steps": "fazer a malha (BED_MESH_CALIBRATE), SAVE_CONFIG e confirmar o Z offset"
+}

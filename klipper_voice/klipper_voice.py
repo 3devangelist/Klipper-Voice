@@ -3,25 +3,31 @@
 klipper_voice.py - makes the Klipper host speak (Klipper-Voice)
 
 Connects to Moonraker and:
+  - announces the printer's main events on its own, with your own phrases:
+      print start, nozzle heating / nozzle hot, bed heating / bed hot,
+      progress every N %, paused (repeated every N minutes until resumed),
+      resumed, complete, cancelled, error and Klipper shutdowns
   - speaks console lines starting with "SAY:"          (SAY macro)
   - plays sounds from lines starting with "SOUND:"     (PLAY_SOUND macro)
   - obeys "VOICE_CTL:" off | on | stop | test | repeat <sec> <text>
-  - announces print events on its own (start, complete, pause, resume,
-    cancel, error) and Klipper shutdowns - no macro changes needed
+                       | set <event> <text> | reset
+    ("set" lets the slicer's start G-code give any event its own phrase
+     for the current print)
 
 All settings live in ~/printer_data/config/klipper-voice.conf (editable
 from Mainsail/Fluidd). After editing, restart the "klipper-voice" service.
 
 Rules:
   - every request is spoken to the end (never cut mid-sentence);
-  - if several requests arrive while speaking, only the most recent one
-    is spoken next (older ones are stale);
+  - requests are spoken in order; if more than "queue" requests pile up,
+    the oldest are dropped (they are stale by then);
   - the piper voice is loaded once at startup, so speech starts quickly.
 
 Usage: klipper_voice.py [path/to/klipper-voice.conf]
 """
 
 import asyncio
+import collections
 import configparser
 import datetime
 import json
@@ -34,13 +40,27 @@ import wave
 
 import websockets
 
-VERSION = "1.0.0"
+VERSION = "1.2.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
+
+EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
+          "progress", "paused", "resumed", "complete", "cancelled", "error",
+          "shutdown")
+ERROR_EVENTS = ("error", "shutdown")
+# Events that wait while "start" is pending, so they are spoken after it
+HELD_EVENTS = ("nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
+               "progress")
+# VOICE_SET lines older than this when a print starts were typed outside a
+# print and are dropped (newer ones may have raced ahead of the state change)
+OVERRIDE_GRACE = 10
+# A print "error" this soon after a Klipper shutdown is not spoken twice
+SHUTDOWN_WINDOW = 15
 
 DEFAULTS = {
     "general": {
         "moonraker": "ws://127.0.0.1:7125/websocket",
         "startup": "Voice ready",
+        "queue": "3",
     },
     "voice": {
         "engine": "piper",                      # piper | espeak | text
@@ -55,14 +75,24 @@ DEFAULTS = {
         "folder": "~/printer_data/config/voice_sounds",
     },
     "events": {
-        "start": "",
+        "start": "Print starting",
+        "start_delay": "3",
+        "nozzle_heating": "Nozzle heating",
+        "nozzle_hot": "Nozzle hot",
+        "bed_heating": "Bed heating",
+        "bed_hot": "Bed hot",
+        "progress": "{p} percent complete",
+        "progress_step": "10",
+        "paused": "sound:alert.wav | Printer paused for filament reload or colour change",
+        "paused_repeat_minutes": "5",
+        "resumed": "Resuming print",
         "complete": "sound:done.wav | Print complete",
         "cancelled": "Print cancelled",
-        "paused": "sound:alert.wav | Print paused",
-        "resumed": "Resuming print",
         "error": "sound:error.wav | Print error",
         "shutdown": "sound:error.wav | Warning, Klipper has stopped",
         "say_error_message": "no",
+        "heating_min_delta": "10",
+        "hot_margin": "3",
     },
     "night": {
         "enabled": "no",
@@ -75,6 +105,9 @@ DEFAULTS = {
 PREFIX_SAY = "SAY:"
 PREFIX_SOUND = "SOUND:"
 PREFIX_CTL = "VOICE_CTL:"
+
+# Klipper object -> event prefix
+HEATERS = {"extruder": "nozzle", "heater_bed": "bed"}
 
 
 def log(*args):
@@ -108,14 +141,28 @@ class KlipperVoice:
         self.effects = self.cp.get("voice", "effects").split()
         self.sound_dir = expand(self.cp.get("sounds", "folder"))
         self.wav = f"/tmp/klipper-voice-{os.getuid()}.wav"
+        self.queue = collections.deque(
+            maxlen=max(1, self.cp.getint("general", "queue")))
+        self.progress_step = self.cp.getfloat("events", "progress_step")
+        self.pause_repeat = 60 * self.cp.getfloat(
+            "events", "paused_repeat_minutes")
+        self.heat_delta = self.cp.getfloat("events", "heating_min_delta")
+        self.hot_margin = self.cp.getfloat("events", "hot_margin")
+        self.start_delay = self.cp.getfloat("events", "start_delay")
 
         self.synthesize = None
-        self.pending = None               # (items, is_error), most recent
         self.has_request = asyncio.Event()
         self.muted = False
-        self.repeater = None              # SAY_REPEAT task
+        self.repeater = None              # repeating task (pause / SAY_REPEAT)
+        self.overrides = {}               # event -> phrase, from VOICE_SET
+        self.overrides_at = float("-inf")  # time of the last VOICE_SET
+        self.start_task = None            # pending "start" announcement
+        self.held = None                  # events waiting for "start"
         self.print_state = None
-        self.last_shutdown = 0.0
+        self.last_progress = 0.0          # last announced progress step (%)
+        self.heaters = {h: {"target": 0.0, "temperature": 0.0,
+                            "heating": False} for h in HEATERS}
+        self.last_shutdown = float("-inf")
         self.ws = None
         self.next_id = 1
         self.subscribe_ids = set()
@@ -184,18 +231,16 @@ class KlipperVoice:
         loop = asyncio.get_running_loop()
         while True:
             await self.has_request.wait()
+            while self.queue:
+                items, is_error = self.queue.popleft()
+                for item in items:
+                    if not self.allowed(is_error):
+                        break
+                    try:
+                        await loop.run_in_executor(None, self.play_item, item)
+                    except Exception as e:           # noqa: BLE001
+                        log(f"Error playing '{item}': {e}")
             self.has_request.clear()
-            request, self.pending = self.pending, None
-            if not request:
-                continue
-            items, is_error = request
-            for item in items:
-                if not self.allowed(is_error):
-                    break
-                try:
-                    await loop.run_in_executor(None, self.play_item, item)
-                except Exception as e:               # noqa: BLE001
-                    log(f"Error playing '{item}': {e}")
 
     # -------------------------------------------------------- filters
     def is_night(self):
@@ -217,7 +262,10 @@ class KlipperVoice:
     def request(self, items, is_error=False):
         if not items or not self.allowed(is_error):
             return
-        self.pending = (items, is_error)
+        entry = (list(items), is_error)
+        if self.queue and self.queue[-1] == entry:
+            return                                   # same phrase queued
+        self.queue.append(entry)
         self.has_request.set()
 
     # --------------------------------------------------------- repeat
@@ -226,10 +274,18 @@ class KlipperVoice:
             self.repeater.cancel()
             self.repeater = None
 
-    async def _repeat(self, seconds, items):
+    async def _repeat(self, seconds, items, first_now=True):
+        if not first_now:
+            await asyncio.sleep(seconds)
         while True:
             self.request(items)
             await asyncio.sleep(seconds)
+
+    def start_repeat(self, seconds, items, first_now=True):
+        self.stop_repeat()
+        if items and seconds > 0:
+            self.repeater = asyncio.create_task(
+                self._repeat(max(5.0, seconds), items, first_now))
 
     def control(self, text):
         parts = text.split(None, 2)
@@ -248,43 +304,133 @@ class KlipperVoice:
                          or ["Voice test"])
         elif cmd == "repeat" and len(parts) == 3:
             try:
-                seconds = max(5.0, float(parts[1]))
+                seconds = float(parts[1])
             except ValueError:
                 log(f"VOICE_CTL repeat: invalid interval '{parts[1]}'")
                 return
-            self.stop_repeat()
-            self.repeater = asyncio.create_task(
-                self._repeat(seconds, items_of(parts[2])))
+            self.start_repeat(seconds, items_of(parts[2]))
+        elif cmd == "set" and len(parts) >= 2:
+            event = parts[1].lower()
+            if event not in EVENTS:
+                log(f"VOICE_SET: unknown event '{event}' "
+                    f"(valid: {', '.join(EVENTS)})")
+                return
+            self.overrides[event] = parts[2] if len(parts) == 3 else ""
+            self.overrides_at = time.monotonic()
+            log(f"VOICE_SET {event} = '{self.overrides[event]}' "
+                "(until the end of this print)")
+        elif cmd == "reset":
+            self.overrides.clear()
+            log("VOICE_SET overrides cleared")
         else:
             log(f"Unknown VOICE_CTL: '{text}'")
 
     # --------------------------------------------------------- events
-    def event(self, name, is_error=False, extra=None):
-        items = items_of(self.cp.get("events", name, fallback=""))
+    def phrase(self, name):
+        if name in self.overrides:
+            return self.overrides[name]
+        return self.cp.get("events", name, fallback="")
+
+    def event(self, name, extra=None, **fmt):
+        if self.held is not None and name in HELD_EVENTS:
+            self.held.append((name, extra, fmt))     # spoken after "start"
+            return []
+        is_error = name in ERROR_EVENTS
+        text = self.phrase(name)
+        if fmt:
+            for k, v in fmt.items():
+                # {p} in the config file, %p from the slicer (where {}
+                # is taken by the slicer's own placeholders)
+                text = text.replace("{" + k + "}", str(v)).replace(
+                    "%" + k, str(v))
+        items = items_of(text)
         if extra and self.cp.getboolean("events", "say_error_message"):
             items.append(extra)
         if items:
             log(f"Event: {name}")
             self.request(items, is_error)
+        return items
+
+    def end_of_print(self, name):
+        self.stop_repeat()
+        if name != "error" or \
+                time.monotonic() - self.last_shutdown > SHUTDOWN_WINDOW:
+            self.event(name)
+        self.overrides.clear()                       # VOICE_SET is per print
+
+    async def _start(self):
+        """The "start" event waits start_delay seconds, so VOICE_SET lines
+        from the slicer's start G-code arrive first. Heater and progress events in
+        the meantime are held and spoken after it."""
+        await asyncio.sleep(self.start_delay)
+        held, self.held, self.start_task = self.held or [], None, None
+        self.event("start")
+        for name, extra, fmt in held:
+            self.event(name, extra, **fmt)
+
+    def cancel_start(self):
+        if self.start_task:
+            self.start_task.cancel()
+            self.start_task = None
+        self.held = None
 
     def transition(self, new):
         old, self.print_state = self.print_state, new
         if old is None or old == new:
             return
+        if new != "printing":
+            self.cancel_start()
         if new == "printing":
             self.stop_repeat()
-            self.event("resumed" if old == "paused" else "start")
+            if old == "paused":
+                self.event("resumed")
+            else:
+                self.last_progress = 0.0
+                if time.monotonic() - self.overrides_at > OVERRIDE_GRACE:
+                    self.overrides.clear()           # left from outside a print
+                self.cancel_start()
+                if self.start_delay > 0:
+                    self.held = []
+                    self.start_task = asyncio.create_task(self._start())
+                else:
+                    self.event("start")
         elif new == "paused":
-            self.event("paused")
-        elif new == "complete":
-            self.stop_repeat()
-            self.event("complete")
-        elif new == "cancelled":
-            self.stop_repeat()
-            self.event("cancelled")
-        elif new == "error":
-            self.stop_repeat()
-            self.event("error", is_error=True)
+            items = self.event("paused")
+            if self.pause_repeat > 0:
+                self.start_repeat(self.pause_repeat, items, first_now=False)
+        elif new in ("complete", "cancelled", "error"):
+            self.end_of_print(new)
+
+    def progress(self, value):
+        """value 0..1 from display_status (follows M73 from the slicer)."""
+        if self.print_state != "printing" or self.progress_step <= 0:
+            return
+        pct = value * 100.0
+        step = int(pct // self.progress_step) * self.progress_step
+        if step > self.last_progress and step < 100:
+            self.last_progress = step
+            self.event("progress", p=int(step) if step == int(step) else step)
+
+    def heater(self, name, changes, announce=True):
+        h = self.heaters[name]
+        old_target = h["target"]
+        h.update({k: float(v) for k, v in changes.items()
+                  if k in ("target", "temperature")})
+        prefix = HEATERS[name]
+        if h["target"] <= 0:
+            h["heating"] = False
+            return
+        if h["target"] != old_target:
+            if h["target"] - h["temperature"] >= self.heat_delta:
+                h["heating"] = True
+                if announce:
+                    self.event(prefix + "_heating")
+            elif h["temperature"] >= h["target"] - self.hot_margin:
+                h["heating"] = False
+        if h["heating"] and h["temperature"] >= h["target"] - self.hot_margin:
+            h["heating"] = False
+            if announce:
+                self.event(prefix + "_hot")
 
     def shutdown(self, message=None):
         now = time.monotonic()
@@ -292,7 +438,7 @@ class KlipperVoice:
             return
         self.last_shutdown = now
         self.stop_repeat()
-        self.event("shutdown", is_error=True, extra=message)
+        self.event("shutdown", extra=message)
 
     # ------------------------------------------------------ moonraker
     async def send(self, method, params=None):
@@ -304,10 +450,14 @@ class KlipperVoice:
         return rid
 
     async def subscribe(self):
+        objects = {"print_stats": ["state"],
+                   "display_status": ["progress"],
+                   "webhooks": ["state", "state_message"]}
+        for h in HEATERS:
+            objects[h] = ["target", "temperature"]
         try:
-            rid = await self.send("printer.objects.subscribe", {
-                "objects": {"print_stats": ["state"],
-                            "webhooks": ["state", "state_message"]}})
+            rid = await self.send("printer.objects.subscribe",
+                                  {"objects": objects})
             self.subscribe_ids.add(rid)
         except websockets.exceptions.WebSocketException:
             pass
@@ -316,6 +466,16 @@ class KlipperVoice:
         """Subscription reply: store current state without announcing."""
         self.print_state = status.get("print_stats", {}).get(
             "state", self.print_state)
+        prog = status.get("display_status", {}).get("progress")
+        if prog is not None and self.progress_step > 0:
+            self.last_progress = int(prog * 100 // self.progress_step) \
+                * self.progress_step
+        for h in HEATERS:
+            if h in status:
+                self.heater(h, status[h], announce=False)
+                hs = self.heaters[h]
+                hs["heating"] = hs["target"] - hs["temperature"] > \
+                    self.hot_margin and hs["target"] > 0
 
     def console_line(self, line):
         if not isinstance(line, str):
@@ -324,7 +484,7 @@ class KlipperVoice:
             text = line[len(PREFIX_SAY):].strip()
             if text:
                 log("SAY:", text)
-                self.request([text])
+                self.request(items_of(text))
         elif line.startswith(PREFIX_SOUND):
             name = line[len(PREFIX_SOUND):].strip()
             if name:
@@ -347,17 +507,26 @@ class KlipperVoice:
                 self.console_line(line)
         elif method == "notify_status_update" and params:
             changes = params[0]
-            state = changes.get("print_stats", {}).get("state")
-            if state:
-                self.transition(state)
+            # shutdown first: the print "error" in the same update is then
+            # recognised as part of it and not spoken twice
             wh = changes.get("webhooks", {})
             if wh.get("state") in ("shutdown", "error"):
                 self.shutdown(wh.get("state_message"))
+            state = changes.get("print_stats", {}).get("state")
+            if state:
+                self.transition(state)
+            for h in HEATERS:
+                if h in changes:
+                    self.heater(h, changes[h])
+            prog = changes.get("display_status", {}).get("progress")
+            if prog is not None:
+                self.progress(prog)
         elif method == "notify_klippy_ready":
             asyncio.create_task(self.subscribe())
         elif method == "notify_klippy_shutdown":
             self.shutdown()
         elif method == "notify_klippy_disconnected":
+            self.cancel_start()
             self.print_state = None
 
     async def listen(self):

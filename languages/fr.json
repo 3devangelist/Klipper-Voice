@@ -1,0 +1,46 @@
+{
+  "name": "Français",
+  "voice": "fr_FR-siwis-medium",
+  "espeak": "fr",
+  "length_scale": 1.1,
+  "startup": "Voix prête",
+  "events": {
+    "start": "Début de l'impression",
+    "nozzle_heating": "Buse en chauffe",
+    "nozzle_hot": "Buse chaude",
+    "bed_heating": "Plateau en chauffe",
+    "bed_hot": "Plateau chaud",
+    "progress": "{p} pour cent terminé",
+    "paused": "Imprimante en pause pour recharger le filament ou changer de couleur",
+    "resumed": "Reprise de l'impression",
+    "complete": "Impression terminée",
+    "cancelled": "Impression annulée",
+    "error": "Erreur d'impression",
+    "shutdown": "Attention, Klipper s'est arrêté"
+  },
+  "leveling": {
+    "heating": "Chauffe du plateau",
+    "soaking": "Stabilisation",
+    "minutes": "minutes",
+    "reference": "Mesure de la référence",
+    "screw": "Vis",
+    "tighten": "Serre",
+    "loosen": "Desserre",
+    "turn": "tour",
+    "turns": "tours",
+    "degrees": "degrés",
+    "and": "et",
+    "ok": "Correct",
+    "recheck": "Nouvelle vérification",
+    "done": "Plateau de niveau",
+    "gave_up": "Je m'arrête ici. Ce n'est pas encore parfait",
+    "stopped": "Nivellement arrêté"
+  },
+  "screw_names": [
+    "avant gauche",
+    "avant droite",
+    "arrière droite",
+    "arrière gauche"
+  ],
+  "next_steps": "lance BED_MESH_CALIBRATE, SAVE_CONFIG et vérifie le Z offset"
+}
