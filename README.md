@@ -122,7 +122,7 @@ complete = sound:done.wav | Your part is ready
 start =
 ```
 
-- Each message starts with an attention chime (`chime = chime.wav` in `[sounds]`, empty = off), like in a shopping centre. It is skipped when the message brings its own sound, or when the previous one ended less than `chime_gap` seconds ago (10 by default), so bed leveling and phrases in a row are not interrupted.
+- Each message starts with an attention chime (`chime = chime.wav` in `[sounds]`, empty = off), like in a shopping centre. It is skipped when the message brings its own sound, or when the previous one ended less than `chime_gap` seconds ago (60 by default), so bed leveling and phrases in a row are not interrupted.
 - An empty event (like `start =`) stays silent.
 - Use `|` to chain sounds and phrases.
 - Progress follows `M73` if your slicer emits it, otherwise the file position.

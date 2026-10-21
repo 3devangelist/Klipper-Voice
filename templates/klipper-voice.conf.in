@@ -47,7 +47,7 @@ folder = ~/printer_data/config/voice_sounds
 chime = chime.wav
 # No chime if the previous message ended less than this many seconds ago
 # (bed leveling, several phrases in a row)
-chime_gap = 10
+chime_gap = 60
 
 [events]
 # Spoken automatically - no macro changes needed.

@@ -79,7 +79,7 @@ DEFAULTS = {
     "sounds": {
         "folder": "~/printer_data/config/voice_sounds",
         "chime": "",                            # attention sound, e.g. chime.wav
-        "chime_gap": "10",
+        "chime_gap": "60",
     },
     "events": {
         "start": "Print starting",
