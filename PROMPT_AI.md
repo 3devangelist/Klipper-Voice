@@ -28,6 +28,8 @@ Reply in the language I write to you in. Spoken phrases must be in that language
   Do NOT add SAY for those events in macros, or the phrase will be spoken twice. To change them,
   edit Voice_Messages.cfg or use VOICE_SET; to replace one with my own SAY lines, set it to "".
 - Phrases are spoken in order; if more than 3 pile up, the oldest are dropped.
+- Volume and speaking speed: [gcode_macro _VOICE_SETTINGS] (variable_volume, variable_speed) at the
+  top of Voice_Settings.cfg, or VOICE_VOLUME / VOICE_SPEED from the console.
 - Voice-guided bed leveling (Voice/Bed_Level_Voice.cfg): BED_LEVEL_VOICE. The machine settings are
   in [gcode_macro _BLV_CONFIG], file Voice_Settings.cfg; its phrases (variable_level_*) are in
   Voice_Messages.cfg.

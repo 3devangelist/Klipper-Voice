@@ -1,11 +1,23 @@
 # =====================================================================
-#  Klipper-Voice - machine settings for the OPTIONAL bed leveling add-on
+#  Klipper-Voice - SETTINGS
 #  Language: @NAME@
 #
-#  Only needed if you include Voice/Bed_Level_Voice.cfg (printers with
-#  manual bed screws and a probe). Its phrases are in Voice_Messages.cfg.
+#  Change a value, then Save & Restart. VOICE_VOLUME and VOICE_SPEED in
+#  the console also save their value here.
 #  This file is yours: install.sh creates it once and never overwrites it.
 #  Need help filling it in? Use PROMPT_AI.md from the repository.
+# =====================================================================
+
+[gcode_macro _VOICE_SETTINGS]
+# Volume 0..100 (voice and sounds)
+variable_volume: 100
+# Speaking speed: 1.0 normal, higher = slower
+variable_speed: @LENGTH_SCALE@
+gcode:
+
+# =====================================================================
+#  Bed leveling - only used with Voice/Bed_Level_Voice.cfg (printers with
+#  manual bed screws and a probe). Its phrases are in Voice_Messages.cfg.
 # =====================================================================
 
 [gcode_macro _BLV_CONFIG]

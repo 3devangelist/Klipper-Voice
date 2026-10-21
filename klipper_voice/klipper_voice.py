@@ -46,7 +46,7 @@ import wave
 
 import websockets
 
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -63,8 +63,10 @@ OVERRIDE_GRACE = 10
 SHUTDOWN_WINDOW = 15
 # VOICE_SPEED limits (length_scale: 1.0 = normal, higher = slower)
 SPEED_MIN, SPEED_MAX = 0.5, 3.0
-# Klipper object holding the phrases (Voice_Messages.cfg)
+# Klipper objects holding the phrases (Voice_Messages.cfg) and the
+# volume / speed (Voice_Settings.cfg)
 MESSAGES = "gcode_macro _VOICE_MESSAGES"
+SETTINGS = "gcode_macro _VOICE_SETTINGS"
 # Seconds to wait for Klipper before the startup phrase is spoken anyway
 STARTUP_WAIT = 30
 
@@ -182,6 +184,9 @@ class KlipperVoice:
         self.repeater = None              # repeating task (pause / SAY_REPEAT)
         self.overrides = {}               # event -> phrase, from VOICE_SET
         self.messages = {}                # phrases from Voice_Messages.cfg
+        self.klipper_settings = False     # Voice_Settings.cfg has volume...
+        self.settings_file = os.path.join(os.path.dirname(
+            self.conf_file or expand(DEFAULT_CONF)), "Voice_Settings.cfg")
         self.startup_pending = True       # startup phrase not spoken yet
         self.overrides_at = float("-inf")  # time of the last VOICE_SET
         self.start_task = None            # pending "start" announcement
@@ -382,9 +387,9 @@ class KlipperVoice:
 
     def set_speed(self, value):
         """VOICE_SPEED: no value reports it; a value applies it now, saves
-        it in the config file and speaks the startup phrase as a sample."""
+        it (Voice_Settings.cfg, else the conf) and speaks the test phrase."""
         if not value:
-            self.console(f"Voice speed (length_scale): {self.length_scale:g}"
+            self.console(f"Voice speed: {self.length_scale:g}"
                          " - 1.0 normal, higher = slower")
             return
         try:
@@ -392,13 +397,10 @@ class KlipperVoice:
         except ValueError:
             self.console(f"VOICE_SPEED: invalid value '{value}'")
             return
-        self.length_scale = min(SPEED_MAX, max(SPEED_MIN, speed))
-        saved = self.save_option("voice", "length_scale",
-                                 f"{self.length_scale:g}")
-        log(f"Speed set to {self.length_scale:g}"
-            f"{'' if saved else ' (not saved to the config file)'}")
-        self.console(f"Voice speed: {self.length_scale:g}"
-                     f"{' (saved)' if saved else ' (not saved)'}")
+        self.length_scale = round(min(SPEED_MAX, max(SPEED_MIN, speed)), 2)
+        where = self.persist("speed", f"{self.length_scale:g}",
+                             "voice", "length_scale")
+        self.console(f"Voice speed: {self.length_scale:g} ({where})")
         self.request(self.test_items())
 
     def set_volume(self, value):
@@ -412,12 +414,59 @@ class KlipperVoice:
             self.console(f"VOICE_VOLUME: invalid value '{value}'")
             return
         self.volume = min(100, max(0, volume))
-        saved = self.save_option("voice", "volume", str(self.volume))
-        log(f"Volume set to {self.volume}"
-            f"{'' if saved else ' (not saved to the config file)'}")
-        self.console(f"Voice volume: {self.volume}"
-                     f"{' (saved)' if saved else ' (not saved)'}")
+        where = self.persist("volume", str(self.volume), "voice", "volume")
+        self.console(f"Voice volume: {self.volume} ({where})")
         self.request(self.test_items())
+
+    def apply_settings(self, values):
+        """volume / speed from [gcode_macro _VOICE_SETTINGS]."""
+        try:
+            if "volume" in values:
+                self.volume = min(100, max(0, round(float(values["volume"]))))
+            if "speed" in values:
+                self.length_scale = min(SPEED_MAX, max(
+                    SPEED_MIN, float(values["speed"])))
+        except (TypeError, ValueError) as e:
+            log(f"Voice_Settings.cfg: invalid volume/speed ({e})")
+
+    def persist(self, var, value, section, key):
+        """Saves a VOICE_VOLUME / VOICE_SPEED value where it lives:
+        Voice_Settings.cfg (also updated in Klipper's memory), or the conf
+        on installs without it. Returns where, for the console."""
+        if self.klipper_settings:
+            self.klipper_script(f"SET_GCODE_VARIABLE MACRO=_VOICE_SETTINGS "
+                                f"VARIABLE={var} VALUE={value}")
+            if self.save_variable(var, value):
+                return "saved in Voice_Settings.cfg"
+            return "not saved: variable_%s missing in Voice_Settings.cfg" % var
+        if self.save_option(section, key, value):
+            return "saved in klipper-voice.conf"
+        return "not saved"
+
+    def save_variable(self, var, value):
+        """Rewrites "variable_<var>: ..." inside [gcode_macro _VOICE_SETTINGS]
+        of Voice_Settings.cfg, keeping any comment after the value."""
+        try:
+            with open(self.settings_file, encoding="utf-8") as f:
+                lines = f.readlines()
+            current = None
+            for i, line in enumerate(lines):
+                head = re.match(r"\s*\[([^\]]+)\]", line)
+                if head:
+                    current = head.group(1).strip()
+                    continue
+                m = re.match(rf"(\s*variable_{var}\s*:\s*)\S+(.*)", line)
+                if current == SETTINGS and m:
+                    lines[i] = f"{m.group(1)}{value}{m.group(2)}\n"
+                    break
+            else:
+                return False
+            with open(self.settings_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+            return True
+        except OSError as e:
+            log(f"Could not save {var} to {self.settings_file}: {e}")
+            return False
 
     def test_items(self):
         """VOICE_TEST phrase: "test", else "startup", else a fixed one."""
@@ -475,10 +524,12 @@ class KlipperVoice:
     def console(self, text):
         """Shows a line in the Klipper console (Mainsail/Fluidd)."""
         log(text)
+        self.klipper_script("RESPOND MSG=\"%s\"" % text.replace('"', "'"))
+
+    def klipper_script(self, script):
         if self.ws:
             asyncio.create_task(self.send_quiet(
-                "printer.gcode.script",
-                {"script": "RESPOND MSG=\"%s\"" % text.replace('"', "'")}))
+                "printer.gcode.script", {"script": script}))
 
     async def send_quiet(self, method, params):
         try:
@@ -617,6 +668,7 @@ class KlipperVoice:
         for h in HEATERS:
             objects[h] = ["target", "temperature"]
         objects[MESSAGES] = None                     # all its variables
+        objects[SETTINGS] = None
         try:
             rid = await self.send("printer.objects.subscribe",
                                   {"objects": objects})
@@ -643,6 +695,12 @@ class KlipperVoice:
         log(f"Phrases: {len(self.messages)} from Voice_Messages.cfg"
             if self.messages else
             "Phrases: from klipper-voice.conf (no Voice_Messages.cfg)")
+        settings = status.get(SETTINGS) or {}
+        self.klipper_settings = "volume" in settings or "speed" in settings
+        if self.klipper_settings:
+            self.apply_settings(settings)
+            log(f"Volume {self.volume}, speed {self.length_scale:g} "
+                "from Voice_Settings.cfg")
         self.say_startup()
 
     def console_line(self, line):
@@ -691,6 +749,8 @@ class KlipperVoice:
                 self.progress(prog)
             if MESSAGES in changes:                  # SET_GCODE_VARIABLE
                 self.messages.update(changes[MESSAGES])
+            if SETTINGS in changes:
+                self.apply_settings(changes[SETTINGS])
         elif method == "notify_klippy_ready":
             asyncio.create_task(self.subscribe())
         elif method == "notify_klippy_shutdown":

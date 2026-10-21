@@ -64,10 +64,10 @@ The installer:
 3. creates the Python environment `~/klipper-voice-env` with piper;
 4. downloads the voice to `~/klipper-voice-voices/`. If the download fails, the service falls back to espeak;
 5. links `~/printer_data/config/Voice` → `~/Klipper-Voice/Configuration`;
-6. creates **once**, in your language, `Voice_Messages.cfg` (what the printer says), `klipper-voice.conf` (volume, speed, timings), `voice_sounds/`, plus `Voice_Settings.cfg` (only used by the bed leveling add-on);
+6. creates **once**, in your language, `Voice_Messages.cfg` (what the printer says), `Voice_Settings.cfg` (volume, speed and the bed leveling add-on), `klipper-voice.conf` (timings, chime, night mode) and `voice_sounds/`;
 7. creates and starts the `klipper-voice` service, which speaks its startup phrase.
 
-It is safe to run again: your files are never overwritten. To switch language, delete `Voice_Messages.cfg` and `klipper-voice.conf` and run `./install.sh -l <code>`.
+It is safe to run again: your files are never overwritten. To switch language, delete `Voice_Messages.cfg`, `Voice_Settings.cfg` and `klipper-voice.conf` and run `./install.sh -l <code>`.
 
 ### After installing (once)
 
@@ -76,11 +76,20 @@ In `printer.cfg`:
 ```ini
 [include Voice/Voice.cfg]
 [include Voice_Messages.cfg]
+[include Voice_Settings.cfg]
 ```
 
 Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic events already work.
 
-Too fast or too slow? Tune it from the console until it sounds right, for example `VOICE_SPEED SPEED=1.6`. Each language starts with its own value.
+Too loud, too fast? Set them in `Voice_Settings.cfg`, like any other Klipper setting, then Save & Restart:
+
+```ini
+[gcode_macro _VOICE_SETTINGS]
+variable_volume: 70       # 0..100
+variable_speed: 1.6       # 1.0 normal, higher = slower
+```
+
+Or tune them by ear from the console: `VOICE_VOLUME VOLUME=70`, `VOICE_SPEED SPEED=1.6`. Each change is applied at once and saved in the same file. Each language starts with its own speed.
 
 For updates from Mainsail/Fluidd, add to `moonraker.conf` (the section name must be `klipper-voice`, the same as the service, or Moonraker rejects `managed_services`):
 
@@ -139,7 +148,7 @@ paused_repeat_minutes = 3
 - Progress follows `M73` if your slicer emits it, otherwise the file position.
 - Heating is only announced for real heat-ups, at least `heating_min_delta` degrees, so small temperature changes during a print stay silent.
 
-Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), speaking speed (`length_scale`, also set by `VOICE_SPEED`), sound card and sound processing.
+Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), sound card and sound processing. Volume and speed are in `Voice_Settings.cfg`.
 
 ## Phrases from the slicer
 
@@ -184,8 +193,8 @@ SAY MSG="Nozzle hot"
 | `SAY_STOP` | stops the repetition |
 | `VOICE_SET EVENT=... MSG="..."` | phrase for an automatic event, for this print |
 | `VOICE_RESET` | back to the phrases in `Voice_Messages.cfg` |
-| `VOICE_VOLUME VOLUME=70` | volume 0..100 for voice and sounds. Applied at once, saved in the conf, and a sample phrase is spoken. Without `VOLUME` it shows the current value |
-| `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in the conf, and a sample phrase is spoken. Without `SPEED` it shows the current value |
+| `VOICE_VOLUME VOLUME=70` | volume 0..100 for voice and sounds. Applied at once, saved in `Voice_Settings.cfg`, and a sample phrase is spoken. Without `VOLUME` it shows the current value |
+| `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in `Voice_Settings.cfg`, and a sample phrase is spoken. Without `SPEED` it shows the current value |
 | `VOICE_OFF` / `VOICE_ON` | mute / unmute (errors are always spoken) |
 | `VOICE_TEST` | speaks the test phrase (`variable_test` in `Voice_Messages.cfg`) |
 
@@ -206,11 +215,10 @@ For help hooking the voice into your own macros, **[PROMPT_AI.md](PROMPT_AI.md)*
 
 For printers with **manual bed screws and a probe**. Printers with automatic leveling (Z tilt, quad gantry, load cell...) or without a probe don't need it.
 
-To use it, add to `printer.cfg`:
+To use it, add to `printer.cfg` (next to the `Voice_Settings.cfg` include you already have):
 
 ```ini
 [include Voice/Bed_Level_Voice.cfg]
-[include Voice_Settings.cfg]
 ```
 
 Then run it:
@@ -237,7 +245,7 @@ Before using it, fill in `Voice_Settings.cfg`:
 | No sound | `aplay -l` to see the card; `alsamixer` (F6 picks the card, M unmutes); `sudo alsactl store` |
 | The voice says nothing | `journalctl -u klipper-voice -f` and type `VOICE_TEST`; the log shows every event and phrase |
 | `RESPOND` error | `[respond]` is missing; `Voice.cfg` already includes it, check `[include Voice/Voice.cfg]` |
-| Voice too quiet / too loud | `VOICE_VOLUME VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
+| Voice too quiet / too loud | `variable_volume` in `Voice_Settings.cfg`, or `VOICE_VOLUME VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
 | A pop or noise now and then | Intel sound cards power down when idle and pop when they wake up. `install.sh` turns that off (`/etc/modprobe.d/klipper-voice.conf`); run it again on older installs |
 | Robotic voice | piper voice missing or failed to load: see the log, run `./install.sh -v <voice>` |
 | Old phrases after a change | `Voice_Messages.cfg`: Save & Restart (Klipper). `klipper-voice.conf`: `sudo systemctl restart klipper-voice`; `pgrep -af klipper_voice.py` must show a single process |

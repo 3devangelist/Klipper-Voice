@@ -253,14 +253,15 @@ Left for you to do (once):
  1. Add to printer.cfg:
       [include Voice/Voice.cfg]
       [include Voice_Messages.cfg]
+      [include Voice_Settings.cfg]
 
     Optional add-on (manual bed screws + probe only):
       [include Voice/Bed_Level_Voice.cfg]
-      [include Voice_Settings.cfg]
 
  2. Restart Klipper and type in the console:  VOICE_TEST
 
-    What the printer says: edit Voice_Messages.cfg, then Save & Restart.
+    What the printer says: Voice_Messages.cfg. Volume and speed:
+    Voice_Settings.cfg. Edit, then Save & Restart.
 
  3. For updates from Mainsail/Fluidd, add to moonraker.conf:
       [update_manager klipper-voice]
