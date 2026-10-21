@@ -10,9 +10,10 @@ Connects to Moonraker and:
   - speaks console lines starting with "SAY:"          (SAY macro)
   - plays sounds from lines starting with "SOUND:"     (PLAY_SOUND macro)
   - obeys "VOICE_CTL:" off | on | stop | test | repeat <sec> <text>
-                       | set <event> <text> | reset
+                       | set <event> <text> | reset | speed [value]
     ("set" lets the slicer's start G-code give any event its own phrase
-     for the current print)
+     for the current print; "speed" changes length_scale live and saves
+     it in the config file)
 
 All settings live in ~/printer_data/config/klipper-voice.conf (editable
 from Mainsail/Fluidd). After editing, restart the "klipper-voice" service.
@@ -32,6 +33,7 @@ import configparser
 import datetime
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -40,7 +42,7 @@ import wave
 
 import websockets
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -55,6 +57,8 @@ HELD_EVENTS = ("nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
 OVERRIDE_GRACE = 10
 # A print "error" this soon after a Klipper shutdown is not spoken twice
 SHUTDOWN_WINDOW = 15
+# VOICE_SPEED limits (length_scale: 1.0 = normal, higher = slower)
+SPEED_MIN, SPEED_MAX = 0.5, 3.0
 
 DEFAULTS = {
     "general": {
@@ -133,10 +137,16 @@ class KlipperVoice:
         self.cp = configparser.ConfigParser(interpolation=None)
         self.cp.read_dict(DEFAULTS)
         found = self.cp.read(expand(conf_file), encoding="utf-8")
+        self.conf_file = found[0] if found else None
         log(f"Klipper-Voice v{VERSION}; config: "
-            f"{found[0] if found else 'none (using defaults)'}")
+            f"{self.conf_file or 'none (using defaults)'}")
 
         self.engine = self.cp.get("voice", "engine").strip().lower()
+        self.length_scale = self.cp.getfloat("voice", "length_scale")
+        # espeak speed (-s, words per minute) follows length_scale changes
+        # made with VOICE_SPEED, relative to the values in the config file
+        m = re.search(r"-s\s+(\d+)", self.cp.get("voice", "espeak"))
+        self.espeak_base = (int(m.group(1)) if m else 175, self.length_scale)
         self.device = self.cp.get("voice", "device").strip()
         self.effects = self.cp.get("voice", "effects").split()
         self.sound_dir = expand(self.cp.get("sounds", "folder"))
@@ -172,10 +182,9 @@ class KlipperVoice:
         try:
             from piper import PiperVoice, SynthesisConfig
             voice = PiperVoice.load(expand(self.cp.get("voice", "model")))
-            cfg = SynthesisConfig(
-                length_scale=self.cp.getfloat("voice", "length_scale"))
 
             def _synthesize(text):
+                cfg = SynthesisConfig(length_scale=self.length_scale)
                 with wave.open(self.wav, "wb") as f:
                     voice.synthesize_wav(text, f, syn_config=cfg)
 
@@ -224,7 +233,9 @@ class KlipperVoice:
             self.pipe(["sox", "-q", self.wav, "-t", "wav", "-"]
                       + self.effects, self.aplay())
         else:
-            self.pipe(shlex.split(self.cp.get("voice", "espeak"))
+            wpm, ls = self.espeak_base
+            speed = ["-s", str(round(wpm * ls / self.length_scale))]
+            self.pipe(shlex.split(self.cp.get("voice", "espeak")) + speed
                       + ["--stdout", item], self.aplay())
 
     async def speaker(self):
@@ -322,8 +333,72 @@ class KlipperVoice:
         elif cmd == "reset":
             self.overrides.clear()
             log("VOICE_SET overrides cleared")
+        elif cmd == "speed":
+            self.set_speed(parts[1] if len(parts) > 1 else "")
         else:
             log(f"Unknown VOICE_CTL: '{text}'")
+
+    def set_speed(self, value):
+        """VOICE_SPEED: no value reports it; a value applies it now, saves
+        it in the config file and speaks the startup phrase as a sample."""
+        if not value:
+            self.console(f"Voice speed (length_scale): {self.length_scale:g}"
+                         " - 1.0 normal, higher = slower")
+            return
+        try:
+            speed = float(value)
+        except ValueError:
+            self.console(f"VOICE_SPEED: invalid value '{value}'")
+            return
+        self.length_scale = min(SPEED_MAX, max(SPEED_MIN, speed))
+        saved = self.save_option("voice", "length_scale",
+                                 f"{self.length_scale:g}")
+        log(f"Speed set to {self.length_scale:g}"
+            f"{'' if saved else ' (not saved to the config file)'}")
+        self.console(f"Voice speed: {self.length_scale:g}"
+                     f"{' (saved)' if saved else ' (not saved)'}")
+        self.request(items_of(self.cp.get("general", "startup"))
+                     or ["Voice test"])
+
+    def save_option(self, section, key, value):
+        """Rewrites "key = ..." inside [section] of the config file, keeping
+        everything else (comments included). Returns True if saved."""
+        if not self.conf_file:
+            return False
+        try:
+            with open(self.conf_file, encoding="utf-8") as f:
+                lines = f.readlines()
+            current = None
+            for i, line in enumerate(lines):
+                head = re.match(r"\s*\[([^\]]+)\]", line)
+                if head:
+                    current = head.group(1).strip()
+                elif current == section and re.match(
+                        rf"\s*{re.escape(key)}\s*[=:]", line):
+                    lines[i] = f"{key} = {value}\n"
+                    break
+            else:
+                return False
+            with open(self.conf_file, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+            return True
+        except OSError as e:
+            log(f"Could not save {key} to {self.conf_file}: {e}")
+            return False
+
+    def console(self, text):
+        """Shows a line in the Klipper console (Mainsail/Fluidd)."""
+        log(text)
+        if self.ws:
+            asyncio.create_task(self.send_quiet(
+                "printer.gcode.script",
+                {"script": "RESPOND MSG=\"%s\"" % text.replace('"', "'")}))
+
+    async def send_quiet(self, method, params):
+        try:
+            await self.send(method, params)
+        except websockets.exceptions.WebSocketException:
+            pass
 
     # --------------------------------------------------------- events
     def phrase(self, name):

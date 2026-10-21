@@ -24,6 +24,8 @@ engine = piper
 # Piper voice model (installed: @VOICE@)
 model = ~/klipper-voice-voices/voice.onnx
 # 1.0 = normal speed; higher = slower
+# Also from the Klipper console: VOICE_SPEED SPEED=1.4 (applied at once
+# and saved here)
 length_scale = @LENGTH_SCALE@
 # Sound processing (sox) for small speakers:
 # cut the bass, compress and normalise as loud as possible without clipping

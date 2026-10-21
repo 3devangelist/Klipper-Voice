@@ -54,7 +54,9 @@ if [ -z "$LANG_CODE" ]; then
     i=1
     for l in "${LANGS[@]}"; do
       IFS=$'\t' read -r code name voice <<<"$l"
-      printf '  %2d) %-22s (%s, voice %s)\n' "$i" "$name" "$code" "$voice"
+      # pad by characters, not bytes (printf %-22s misaligns "Español")
+      pad=$((22 - ${#name})); [ "$pad" -gt 0 ] || pad=1
+      printf '  %2d) %s%*s (%s, voice %s)\n' "$i" "$name" "$pad" "" "$code" "$voice"
       i=$((i + 1))
     done
     read -r -p "Number [1]: " choice

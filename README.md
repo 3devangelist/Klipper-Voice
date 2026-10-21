@@ -79,6 +79,8 @@ In `printer.cfg`:
 
 Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic events already work.
 
+Too fast or too slow? Tune it from the console until it sounds right, for example `VOICE_SPEED SPEED=1.6`. Each language starts with its own value.
+
 For updates from Mainsail/Fluidd, add to `moonraker.conf`:
 
 ```ini
@@ -125,7 +127,7 @@ start =
 - Progress follows `M73` if your slicer emits it, otherwise the file position.
 - Heating is only announced for real heat-ups, at least `heating_min_delta` degrees, so small temperature changes during a print stay silent.
 
-Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), speaking speed, sound card and sound processing.
+Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), speaking speed (`length_scale`, also set by `VOICE_SPEED`), sound card and sound processing.
 
 ## Phrases from the slicer
 
@@ -170,6 +172,7 @@ SAY MSG="Nozzle hot"
 | `SAY_STOP` | stops the repetition |
 | `VOICE_SET EVENT=... MSG="..."` | phrase for an automatic event, for this print |
 | `VOICE_RESET` | back to the phrases in the conf |
+| `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in the conf, and a sample phrase is spoken. Without `SPEED` it shows the current value |
 | `VOICE_OFF` / `VOICE_ON` | mute / unmute (errors are always spoken) |
 | `VOICE_TEST` | speaks the startup phrase |
 
