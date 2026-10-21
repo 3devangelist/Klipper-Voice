@@ -16,8 +16,11 @@ Connects to Moonraker and:
      for the current print; "speed" and "volume" change length_scale and
      volume live and save them in the config file)
 
-All settings live in ~/printer_data/config/klipper-voice.conf (editable
-from Mainsail/Fluidd). After editing, restart the "klipper-voice" service.
+The phrases live in Voice_Messages.cfg ([gcode_macro _VOICE_MESSAGES],
+read from Klipper: edit, then Save & Restart). The other settings live in
+~/printer_data/config/klipper-voice.conf; after editing it, restart the
+"klipper-voice" service. Phrases still found in the conf are used when
+Voice_Messages.cfg does not have them.
 
 Rules:
   - every request is spoken to the end (never cut mid-sentence);
@@ -43,7 +46,7 @@ import wave
 
 import websockets
 
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -60,6 +63,10 @@ OVERRIDE_GRACE = 10
 SHUTDOWN_WINDOW = 15
 # VOICE_SPEED limits (length_scale: 1.0 = normal, higher = slower)
 SPEED_MIN, SPEED_MAX = 0.5, 3.0
+# Klipper object holding the phrases (Voice_Messages.cfg)
+MESSAGES = "gcode_macro _VOICE_MESSAGES"
+# Seconds to wait for Klipper before the startup phrase is spoken anyway
+STARTUP_WAIT = 30
 
 DEFAULTS = {
     "general": {
@@ -174,6 +181,8 @@ class KlipperVoice:
         self.muted = False
         self.repeater = None              # repeating task (pause / SAY_REPEAT)
         self.overrides = {}               # event -> phrase, from VOICE_SET
+        self.messages = {}                # phrases from Voice_Messages.cfg
+        self.startup_pending = True       # startup phrase not spoken yet
         self.overrides_at = float("-inf")  # time of the last VOICE_SET
         self.start_task = None            # pending "start" announcement
         self.held = None                  # events waiting for "start"
@@ -412,9 +421,25 @@ class KlipperVoice:
 
     def test_items(self):
         """VOICE_TEST phrase: "test", else "startup", else a fixed one."""
-        return (items_of(self.cp.get("general", "test"))
-                or items_of(self.cp.get("general", "startup"))
+        return (items_of(self.text("test", "general"))
+                or items_of(self.text("startup", "general"))
                 or ["Voice test"])
+
+    def text(self, name, section):
+        """A phrase: Voice_Messages.cfg first, then the conf file."""
+        if name in self.messages:
+            return str(self.messages[name])
+        return self.cp.get(section, name, fallback="")
+
+    def say_startup(self):
+        if self.startup_pending:
+            self.startup_pending = False
+            self.request(items_of(self.text("startup", "general")))
+
+    async def startup_fallback(self):
+        """Klipper not ready in time: speak the startup phrase anyway."""
+        await asyncio.sleep(STARTUP_WAIT)
+        self.say_startup()
 
     def save_option(self, section, key, value):
         """Rewrites "key = ..." inside [section] of the config file, keeping
@@ -465,7 +490,7 @@ class KlipperVoice:
     def phrase(self, name):
         if name in self.overrides:
             return self.overrides[name]
-        return self.cp.get("events", name, fallback="")
+        return self.text(name, "events")
 
     def event(self, name, extra=None, **fmt):
         if self.held is not None and name in HELD_EVENTS:
@@ -591,6 +616,7 @@ class KlipperVoice:
                    "webhooks": ["state", "state_message"]}
         for h in HEATERS:
             objects[h] = ["target", "temperature"]
+        objects[MESSAGES] = None                     # all its variables
         try:
             rid = await self.send("printer.objects.subscribe",
                                   {"objects": objects})
@@ -612,6 +638,12 @@ class KlipperVoice:
                 hs = self.heaters[h]
                 hs["heating"] = hs["target"] - hs["temperature"] > \
                     self.hot_margin and hs["target"] > 0
+        # phrases as Klipper loaded them (Save & Restart applies edits)
+        self.messages = dict(status.get(MESSAGES) or {})
+        log(f"Phrases: {len(self.messages)} from Voice_Messages.cfg"
+            if self.messages else
+            "Phrases: from klipper-voice.conf (no Voice_Messages.cfg)")
+        self.say_startup()
 
     def console_line(self, line):
         if not isinstance(line, str):
@@ -657,6 +689,8 @@ class KlipperVoice:
             prog = changes.get("display_status", {}).get("progress")
             if prog is not None:
                 self.progress(prog)
+            if MESSAGES in changes:                  # SET_GCODE_VARIABLE
+                self.messages.update(changes[MESSAGES])
         elif method == "notify_klippy_ready":
             asyncio.create_task(self.subscribe())
         elif method == "notify_klippy_shutdown":
@@ -695,9 +729,8 @@ class KlipperVoice:
         if self.engine == "piper":
             self.load_piper()
         asyncio.create_task(self.speaker())
-        startup = self.cp.get("general", "startup").strip()
-        if startup:
-            self.request(items_of(startup))
+        # the startup phrase is spoken once Klipper's phrases are known
+        asyncio.create_task(self.startup_fallback())
         await self.listen()
 
 

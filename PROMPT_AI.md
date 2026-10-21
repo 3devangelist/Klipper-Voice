@@ -20,15 +20,17 @@ Reply in the language I write to you in. Spoken phrases must be in that language
   - Sounds and text can be combined in SAY_REPEAT: MSG="sound:alert.wav | Filament runout"
   - VOICE_SET EVENT=<event> MSG="text" -> own phrase for an automatic event during the current print
     (good for the slicer's start G-code; in the slicer use %p for the progress percentage)
-  - VOICE_RESET                     -> back to the phrases in klipper-voice.conf
+  - VOICE_RESET                     -> back to the phrases in Voice_Messages.cfg
 - The service ALREADY announces on its own, without macros: print start, nozzle heating / hot,
   bed heating / hot, progress every 10 %, paused (repeated every 5 minutes until resumed), resumed,
-  complete, cancelled, error and Klipper shutdowns. Those phrases are in klipper-voice.conf, [events].
+  complete, cancelled, error and Klipper shutdowns. All the phrases are in Voice_Messages.cfg
+  ([gcode_macro _VOICE_MESSAGES], one variable_<event> per phrase, in quotes; "" = silent).
   Do NOT add SAY for those events in macros, or the phrase will be spoken twice. To change them,
-  edit klipper-voice.conf or use VOICE_SET; to replace one with my own SAY lines, empty it in the conf.
+  edit Voice_Messages.cfg or use VOICE_SET; to replace one with my own SAY lines, set it to "".
 - Phrases are spoken in order; if more than 3 pile up, the oldest are dropped.
-- Voice-guided bed leveling (Voice/Bed_Level_Voice.cfg): BED_LEVEL_VOICE. The machine settings and
-  spoken phrases are in [gcode_macro _BLV_CONFIG], file Voice_Settings.cfg.
+- Voice-guided bed leveling (Voice/Bed_Level_Voice.cfg): BED_LEVEL_VOICE. The machine settings are
+  in [gcode_macro _BLV_CONFIG], file Voice_Settings.cfg; its phrases (variable_level_*) are in
+  Voice_Messages.cfg.
 
 ## What I want
 1. Hook the voice into my macros and my slicer's custom G-code where it makes sense, for example:
@@ -60,7 +62,7 @@ Reply in the language I write to you in. Spoken phrases must be in that language
 - Pitch: M3 = 0.5 | M4 = 0.7 | M5 = 0.8 mm per turn.
 - Explain how to check the direction: run BED_LEVEL_VOICE SOAK=0, tighten screw 2 a little and see
   whether the reading (mm, in the console) goes down. If "Tighten" raises the bed, set variable_invert: 1.
-- If my language is not English, translate the variable_txt_* phrases.
+- The leveling phrases (variable_level_* in Voice_Messages.cfg) are already in my language.
 
 ## At the end
 Give me a short test list: VOICE_TEST; a short print to hear the events; simulate a filament runout;

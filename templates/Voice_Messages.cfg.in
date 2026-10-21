@@ -1,0 +1,51 @@
+# =====================================================================
+#  Klipper-Voice - WHAT THE PRINTER SAYS
+#  Language: @NAME@
+#
+#  Change any phrase between the quotes, then Save & Restart.
+#    - keep the quotes "..."
+#    - ""  = silent
+#    - sound:file.wav | text  = a sound from voice_sounds, then the text
+#    - never use ; or # inside a phrase
+#
+#  This file is yours: install.sh creates it once and never overwrites it.
+# =====================================================================
+
+[gcode_macro _VOICE_MESSAGES]
+# --- Service ----------------------------------------------------------
+variable_startup: "@STARTUP@"
+variable_test: "@TEST@"
+
+# --- Print ------------------------------------------------------------
+variable_start: "@EV_START@"
+variable_nozzle_heating: "@EV_NOZZLE_HEATING@"
+variable_nozzle_hot: "@EV_NOZZLE_HOT@"
+variable_bed_heating: "@EV_BED_HEATING@"
+variable_bed_hot: "@EV_BED_HOT@"
+# {p} is replaced by the percentage
+variable_progress: "@EV_PROGRESS@"
+variable_paused: "sound:alert.wav | @EV_PAUSED@"
+variable_resumed: "@EV_RESUMED@"
+variable_complete: "sound:done.wav | @EV_COMPLETE@"
+variable_cancelled: "@EV_CANCELLED@"
+variable_error: "sound:error.wav | @EV_ERROR@"
+variable_shutdown: "sound:error.wav | @EV_SHUTDOWN@"
+
+# --- Bed leveling (only with Voice/Bed_Level_Voice.cfg) -----------------
+variable_level_heating: "@LV_HEATING@"
+variable_level_soaking: "@LV_SOAKING@"
+variable_level_minutes: "@LV_MINUTES@"
+variable_level_reference: "@LV_REFERENCE@"
+variable_level_screw: "@LV_SCREW@"
+variable_level_tighten: "@LV_TIGHTEN@"
+variable_level_loosen: "@LV_LOOSEN@"
+variable_level_turn: "@LV_TURN@"
+variable_level_turns: "@LV_TURNS@"
+variable_level_degrees: "@LV_DEGREES@"
+variable_level_and: "@LV_AND@"
+variable_level_ok: "@LV_OK@"
+variable_level_recheck: "@LV_RECHECK@"
+variable_level_done: "@LV_DONE@"
+variable_level_gave_up: "@LV_GAVE_UP@"
+variable_level_stopped: "@LV_STOPPED@"
+gcode:

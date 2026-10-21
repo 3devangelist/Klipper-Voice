@@ -2,19 +2,17 @@
 #  klipper-voice.conf - voice service settings (Klipper-Voice)
 #  Language: @NAME@
 #
+#  WHAT THE PRINTER SAYS is not here: it is in Voice_Messages.cfg.
+#
 #  This file is YOURS: install.sh creates it once in
-#  ~/printer_data/config/ and never overwrites it. Rewrite the phrases
-#  as you like. After editing, restart the "klipper-voice" service
+#  ~/printer_data/config/ and never overwrites it. After editing,
+#  restart the "klipper-voice" service
 #  (Mainsail/Fluidd: services menu | SSH: sudo systemctl restart klipper-voice)
 # =====================================================================
 
 [general]
 # Moonraker address (usually no need to change)
 moonraker = ws://127.0.0.1:7125/websocket
-# Phrase spoken when the service starts (empty = silent at startup)
-startup = @STARTUP@
-# Phrase spoken by VOICE_TEST and as the VOICE_SPEED sample
-test = @TEST@
 # Max phrases waiting to be spoken; older ones are dropped beyond this
 queue = 3
 
@@ -53,33 +51,14 @@ chime = chime.wav
 chime_gap = 60
 
 [events]
-# Spoken automatically - no macro changes needed.
-# Each event: texts and sounds ("sound:file.wav") separated by "|".
-# Empty = silent.
-# Any event can also get its own phrase for one print from the slicer's
-# start G-code:   VOICE_SET EVENT=complete MSG="Your phrase"
-start = @EV_START@
+# Automatic events (their phrases are in Voice_Messages.cfg)
 # Seconds "start" waits, so VOICE_SET lines in the slicer's start G-code
 # arrive in time (heating phrases in the meantime are spoken after it)
 start_delay = 3
-nozzle_heating = @EV_NOZZLE_HEATING@
-nozzle_hot = @EV_NOZZLE_HOT@
-bed_heating = @EV_BED_HEATING@
-bed_hot = @EV_BED_HOT@
-# Progress: {p} is replaced by the percentage
-progress = @EV_PROGRESS@
-# Every how many percent (0 = never)
+# Progress phrase every how many percent (0 = never)
 progress_step = 10
-# Paused (filament runout, M600 colour change, PAUSE...)
-paused = sound:alert.wav | @EV_PAUSED@
 # Repeat the paused phrase every N minutes until resumed (0 = once)
 paused_repeat_minutes = 5
-resumed = @EV_RESUMED@
-complete = sound:done.wav | @EV_COMPLETE@
-cancelled = @EV_CANCELLED@
-error = sound:error.wav | @EV_ERROR@
-# Klipper stopped (shutdown, "Timer too close", MCU lost...)
-shutdown = sound:error.wav | @EV_SHUTDOWN@
 # yes = also speak Klipper's own error message (in English)
 say_error_message = no
 # Heating is announced only if the target is at least this many degrees

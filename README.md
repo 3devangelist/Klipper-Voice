@@ -5,7 +5,7 @@ Make your Klipper printer **talk**. Every important moment of a print is spoken 
 > "Bed heating" … "Bed hot" … "Nozzle heating" … "Nozzle hot" … "10 percent complete" … "20 percent complete" … "Printer paused for filament reload or colour change" *(repeated every 5 minutes until you are back)* … "Print complete"
 
 - **Automatic events, no macro changes:** print start, nozzle and bed heating / hot, progress every 10 %, pause, resume, complete, cancel, error and Klipper shutdowns.
-- **Your phrases:** every event has its phrase in an editable file. The **slicer** can also give any event its own phrase for a single print (`VOICE_SET`).
+- **Your phrases:** everything the printer says is in one simple file, `Voice_Messages.cfg`. The **slicer** can also give any event its own phrase for a single print (`VOICE_SET`).
 - **Never miss a pause:** while the printer waits for filament or a colour change, it reminds you every N minutes.
 - **Your own messages** from any macro or from the slicer's custom G-code: `SAY MSG="..."`.
 - **8 languages ready**, chosen at install time: English, Deutsch, Español, Français, Italiano, Polski, Português (Brasil), Português (Portugal). Adding one more is a single JSON file.
@@ -64,10 +64,10 @@ The installer:
 3. creates the Python environment `~/klipper-voice-env` with piper;
 4. downloads the voice to `~/klipper-voice-voices/`. If the download fails, the service falls back to espeak;
 5. links `~/printer_data/config/Voice` → `~/Klipper-Voice/Configuration`;
-6. creates **once**, in your language, `klipper-voice.conf` and `voice_sounds/`, plus `Voice_Settings.cfg` (only used by the bed leveling add-on);
+6. creates **once**, in your language, `Voice_Messages.cfg` (what the printer says), `klipper-voice.conf` (volume, speed, timings), `voice_sounds/`, plus `Voice_Settings.cfg` (only used by the bed leveling add-on);
 7. creates and starts the `klipper-voice` service, which speaks its startup phrase.
 
-It is safe to run again: your files are never overwritten. To switch language, delete `klipper-voice.conf` and run `./install.sh -l <code>`.
+It is safe to run again: your files are never overwritten. To switch language, delete `Voice_Messages.cfg` and `klipper-voice.conf` and run `./install.sh -l <code>`.
 
 ### After installing (once)
 
@@ -75,6 +75,7 @@ In `printer.cfg`:
 
 ```ini
 [include Voice/Voice.cfg]
+[include Voice_Messages.cfg]
 ```
 
 Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic events already work.
@@ -94,7 +95,24 @@ requirements: requirements.txt
 managed_services: klipper-voice
 ```
 
-## Automatic events (`klipper-voice.conf`)
+## What the printer says (`Voice_Messages.cfg`)
+
+All the phrases are in one file, `Voice_Messages.cfg`, next to `printer.cfg`. Open it in Mainsail/Fluidd, change any phrase between the quotes, then **Save & Restart**:
+
+```ini
+[gcode_macro _VOICE_MESSAGES]
+variable_startup: "Voice ready"
+variable_complete: "sound:done.wav | Your part is ready"
+variable_progress: "{p} percent done"
+variable_start: ""
+```
+
+- Keep the quotes. `""` keeps that message silent.
+- `sound:file.wav | text` plays a sound from `voice_sounds/`, then the text. Use `|` to chain sounds and phrases.
+- Never use `;` or `#` inside a phrase.
+- The bed leveling phrases are at the end of the same file.
+
+## Automatic events
 
 The service watches the printer through Moonraker and speaks on its own:
 
@@ -109,22 +127,15 @@ The service watches the printer through Moonraker and speaks on its own:
 | `complete` / `cancelled` | end of print | Print complete / Print cancelled |
 | `error` / `shutdown` | print error / Klipper stopped (a shutdown mid-print says only the `shutdown` phrase) | Print error / Warning, Klipper has stopped |
 
-Edit `~/printer_data/config/klipper-voice.conf` from Mainsail/Fluidd, then restart the `klipper-voice` service:
+The timings are in `~/printer_data/config/klipper-voice.conf` (after editing it, restart the `klipper-voice` service):
 
 ```ini
 [events]
-bed_heating = Bed heating
-progress = {p} percent done
 progress_step = 25
-paused = sound:alert.wav | Filament needed
 paused_repeat_minutes = 3
-complete = sound:done.wav | Your part is ready
-start =
 ```
 
 - Each message starts with an attention chime (`chime = chime.wav` in `[sounds]`, empty = off), like in a shopping centre. It is skipped when the message brings its own sound, or when the previous one ended less than `chime_gap` seconds ago (60 by default), so bed leveling and phrases in a row are not interrupted.
-- An empty event (like `start =`) stays silent.
-- Use `|` to chain sounds and phrases.
 - Progress follows `M73` if your slicer emits it, otherwise the file position.
 - Heating is only announced for real heat-ups, at least `heating_min_delta` degrees, so small temperature changes during a print stay silent.
 
@@ -153,7 +164,7 @@ VOICE_SET EVENT=start MSG=""
 {if layer_num == 1}SAY MSG="First layer done"{endif}
 ```
 
-**Or take over the heating phrases yourself.** Set `bed_heating =`, `bed_hot =`, `nozzle_heating =` and `nozzle_hot =` empty in the conf, then in the start G-code:
+**Or take over the heating phrases yourself.** Set `variable_bed_heating`, `variable_bed_hot`, `variable_nozzle_heating` and `variable_nozzle_hot` to `""` in `Voice_Messages.cfg`, then in the start G-code:
 
 ```gcode
 SAY MSG="Bed heating"
@@ -172,11 +183,11 @@ SAY MSG="Nozzle hot"
 | `SAY_REPEAT SEC=60 MSG="text"` | repeats until `SAY_STOP` or the print resumes |
 | `SAY_STOP` | stops the repetition |
 | `VOICE_SET EVENT=... MSG="..."` | phrase for an automatic event, for this print |
-| `VOICE_RESET` | back to the phrases in the conf |
+| `VOICE_RESET` | back to the phrases in `Voice_Messages.cfg` |
 | `VOICE_VOLUME VOLUME=70` | volume 0..100 for voice and sounds. Applied at once, saved in the conf, and a sample phrase is spoken. Without `VOLUME` it shows the current value |
 | `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in the conf, and a sample phrase is spoken. Without `SPEED` it shows the current value |
 | `VOICE_OFF` / `VOICE_ON` | mute / unmute (errors are always spoken) |
-| `VOICE_TEST` | speaks the test phrase (`test` in the conf) |
+| `VOICE_TEST` | speaks the test phrase (`variable_test` in `Voice_Messages.cfg`) |
 
 **Two rules:**
 
@@ -229,7 +240,7 @@ Before using it, fill in `Voice_Settings.cfg`:
 | Voice too quiet / too loud | `VOICE_VOLUME VOLUME=70` from the console; check the volume in `alsamixer`; `effects` in the conf already normalises to −1 dB |
 | A pop or noise now and then | Intel sound cards power down when idle and pop when they wake up. `install.sh` turns that off (`/etc/modprobe.d/klipper-voice.conf`); run it again on older installs |
 | Robotic voice | piper voice missing or failed to load: see the log, run `./install.sh -v <voice>` |
-| Old phrases after a config change | `sudo systemctl restart klipper-voice`; `pgrep -af klipper_voice.py` must show a single process |
+| Old phrases after a change | `Voice_Messages.cfg`: Save & Restart (Klipper). `klipper-voice.conf`: `sudo systemctl restart klipper-voice`; `pgrep -af klipper_voice.py` must show a single process |
 | Sound on the wrong output (e.g. HDMI) | `device = plughw:1,0` in the conf (numbers from `aplay -l`) |
 
 ## Uninstall
@@ -238,7 +249,7 @@ Before using it, fill in `Voice_Settings.cfg`:
 ~/Klipper-Voice/uninstall.sh
 ```
 
-Your files (`klipper-voice.conf`, `Voice_Settings.cfg`, `voice_sounds/`) are kept. Then remove the `[include Voice/...]` lines from `printer.cfg`.
+Your files (`Voice_Messages.cfg`, `klipper-voice.conf`, `Voice_Settings.cfg`, `voice_sounds/`) are kept. Then remove the `[include Voice/...]` lines from `printer.cfg`.
 
 ## Credits and licence
 
