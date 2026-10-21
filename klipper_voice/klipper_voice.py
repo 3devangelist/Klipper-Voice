@@ -42,7 +42,7 @@ import wave
 
 import websockets
 
-VERSION = "1.3.1"
+VERSION = "1.4.0"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -78,6 +78,8 @@ DEFAULTS = {
     },
     "sounds": {
         "folder": "~/printer_data/config/voice_sounds",
+        "chime": "",                            # attention sound, e.g. chime.wav
+        "chime_gap": "10",
     },
     "events": {
         "start": "Print starting",
@@ -151,6 +153,9 @@ class KlipperVoice:
         self.device = self.cp.get("voice", "device").strip()
         self.effects = self.cp.get("voice", "effects").split()
         self.sound_dir = expand(self.cp.get("sounds", "folder"))
+        self.chime = self.cp.get("sounds", "chime").strip()
+        self.chime_gap = self.cp.getfloat("sounds", "chime_gap")
+        self.last_spoken = float("-inf")  # when the last message ended
         self.wav = f"/tmp/klipper-voice-{os.getuid()}.wav"
         self.queue = collections.deque(
             maxlen=max(1, self.cp.getint("general", "queue")))
@@ -245,6 +250,7 @@ class KlipperVoice:
             await self.has_request.wait()
             while self.queue:
                 items, is_error = self.queue.popleft()
+                items = self.with_chime(items)
                 for item in items:
                     if not self.allowed(is_error):
                         break
@@ -252,7 +258,17 @@ class KlipperVoice:
                         await loop.run_in_executor(None, self.play_item, item)
                     except Exception as e:           # noqa: BLE001
                         log(f"Error playing '{item}': {e}")
+                self.last_spoken = time.monotonic()
             self.has_request.clear()
+
+    def with_chime(self, items):
+        """Puts the attention sound before a message, unless the message
+        brings its own sound or follows the previous one within chime_gap
+        seconds (bed leveling, several phrases in a row)."""
+        if not self.chime or items[0].lower().startswith("sound:") or \
+                time.monotonic() - self.last_spoken < self.chime_gap:
+            return items
+        return ["sound:" + self.chime] + items
 
     # -------------------------------------------------------- filters
     def is_night(self):
