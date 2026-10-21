@@ -24,14 +24,15 @@ def raise_error(msg):
     raise MacroError(msg)
 
 
-def load_macros():
+def load_macros(name):
     cp = configparser.RawConfigParser(strict=False)
-    cp.read(os.path.join(ROOT, "Configuration", "Voice.cfg"), encoding="utf-8")
+    cp.read(os.path.join(ROOT, "Configuration", name), encoding="utf-8")
     return {s.split(None, 1)[1]: cp.get(s, "gcode")
             for s in cp.sections() if s.startswith("gcode_macro ")}
 
 
-MACROS = load_macros()
+MACROS = load_macros("Voice.cfg")
+LEVELING = load_macros("Bed_Level_Voice.cfg")
 
 
 def render(name, printer=None, **params):
@@ -107,6 +108,13 @@ def main():
     check("SAY_REPEAT", run("SAY_REPEAT", sec=30, msg="sound:pause | Filament"),
           [f"{C} repeat 30.0 sound:pause | Filament"])
     check("SAY_STOP", run("SAY_STOP"), [f"{C} stop"])
+
+    # bed leveling: every phrase waits until it has been said
+    blv = [ln.strip() for ln in ENV.from_string(LEVELING["_BLV_SAY"]).render(
+        params={"MSG": "Aperta 45 graus"}).splitlines()
+        if ln.strip() and not ln.strip().startswith("#")]
+    check("bed leveling phrases wait", blv,
+          ["M117 Aperta 45 graus", 'SAY MSG="Aperta 45 graus" WAIT=1'])
     print("ALL MACRO TESTS PASSED")
 
 

@@ -287,7 +287,7 @@ BED_LEVEL_VOICE SOAK=0          ; sem espera (testes)
 BED_LEVEL_VOICE_STOP            ; interrompe
 ```
 
-A sonda fica por cima de cada parafuso, sempre a medir, e vai dizendo quanto rodar: "Aperta 45 graus", "Alivia 1 volta e 30 graus" ou "Certo". Depois passa sozinha ao parafuso seguinte e acaba com uma volta de verificação. Os graus vêm do passo do parafuso: o M4 tem 0,7 mm por volta, por isso 0,1 mm ≈ 51°.
+A sonda fica por cima de cada parafuso, sempre a medir, e vai dizendo quanto rodar: "Aperta 45 graus", "Alivia 1 volta e 30 graus" ou "Certo". Cada frase é dita inteira antes de a sonda voltar a mexer, e depois ficam `variable_pause` segundos para rodares o parafuso. Depois passa sozinha ao parafuso seguinte e acaba com uma volta de verificação. Os graus vêm do passo do parafuso: o M4 tem 0,7 mm por volta, por isso 0,1 mm ≈ 51°.
 
 Antes de o usares, preenche o `Voice_Settings.cfg`:
 

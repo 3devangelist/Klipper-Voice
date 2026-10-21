@@ -357,7 +357,7 @@ Em **Machine → Update Manager**, o `klipper-voice` atualiza-se como o Klipper 
 Só serve para impressoras com **parafusos manuais na cama e uma sonda**. A configuração está explicada no [README](README.pt.md#extra-opcional-nivelar-a-cama-por-voz).
 
 1. Clica em **BED LEVEL VOICE**. A impressora aquece a cama, espera, faz o home e mede o primeiro parafuso (a referência).
-2. Por cima de cada um dos outros parafusos vai-te dizendo o que fazer, por exemplo *"Aperta 45 graus"*, *"Alivia 1 volta e 30 graus"* ou *"Certo"*. Roda o parafuso enquanto ela fala.
+2. Por cima de cada um dos outros parafusos vai-te dizendo o que fazer, por exemplo *"Aperta 45 graus"*, *"Alivia 1 volta e 30 graus"* ou *"Certo"*. A sonda só volta a mexer quando a frase acaba, por isso ouves sempre a instrução inteira; depois tens `variable_pause` segundos (por defeito 2,5) para rodar o parafuso antes da medição seguinte.
 3. Depois de dois "Certo" seguidos passa sozinha ao parafuso seguinte, e no fim volta a verificar todos.
 4. **BED LEVEL VOICE STOP** interrompe a qualquer momento.
 

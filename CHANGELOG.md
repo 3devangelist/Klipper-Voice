@@ -23,6 +23,7 @@ The voice controls are now a single command with parameters, and a single **VOIC
 - Exact, not estimated: the service writes its speaking state to `~/printer_data/comms/klipper-voice-busy`, which Klipper reads as a hidden `[temperature_sensor _voice]` (in `Voice_Settings.cfg`), and `SAY` waits on it with `TEMPERATURE_WAIT`. The systemd unit sets it back to 0 if the service stops, so Klipper is never left waiting.
 - Older `Voice_Settings.cfg` without the sensor: `WAIT=1` falls back to a wait estimated from the length of the phrase. `install.sh` prints the block to add.
 - For preparation only (`START_PRINT`, calibrations): while it waits, the head stands still.
+- Bed leveling uses it for every phrase: the probe only moves once the instruction has been said in full. `variable_pause` is now the time after the phrase to turn the screw (new default 2.5 s; existing `Voice_Settings.cfg` keep their value).
 - The player's errors (`aplay`) are now written to the log.
 
 ### Clearer voice

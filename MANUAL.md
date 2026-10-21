@@ -359,7 +359,7 @@ In **Machine → Update Manager**, `klipper-voice` is updated like Klipper and M
 This is only for printers with **manual bed screws and a probe**. Setting it up is explained in the [README](README.md#optional-add-on-voice-guided-bed-leveling).
 
 1. Click **BED LEVEL VOICE**. The printer heats the bed, waits, homes, and probes the first screw (the reference).
-2. Above each of the other screws it keeps telling you what to do, for example *"Tighten 45 degrees"*, *"Loosen 1 turn and 30 degrees"* or *"OK"*. Turn the screw while it talks.
+2. Above each of the other screws it keeps telling you what to do, for example *"Tighten 45 degrees"*, *"Loosen 1 turn and 30 degrees"* or *"OK"*. The probe only moves again once the phrase is over, so you always hear the whole instruction; then you have `variable_pause` seconds (2.5 by default) to turn the screw before the next reading.
 3. After two "OK" in a row it moves to the next screw by itself, and at the end it checks every screw again.
 4. **BED LEVEL VOICE STOP** aborts at any time.
 

@@ -287,7 +287,7 @@ BED_LEVEL_VOICE SOAK=0          ; no soak (testing)
 BED_LEVEL_VOICE_STOP            ; abort
 ```
 
-The probe parks over each screw, probing continuously, and keeps saying how much to turn: "Tighten 45 degrees", "Loosen 1 turn and 30 degrees" or "OK". It then moves to the next screw by itself and finishes with a verification pass. Degrees come from the screw pitch: M4 is 0.7 mm per turn, so 0.1 mm ≈ 51°.
+The probe parks over each screw, probing continuously, and keeps saying how much to turn: "Tighten 45 degrees", "Loosen 1 turn and 30 degrees" or "OK". Each phrase is said in full before the probe moves again, then `variable_pause` seconds are left to turn the screw. It then moves to the next screw by itself and finishes with a verification pass. Degrees come from the screw pitch: M4 is 0.7 mm per turn, so 0.1 mm ≈ 51°.
 
 Before using it, fill in `Voice_Settings.cfg`:
 

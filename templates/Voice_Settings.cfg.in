@@ -49,7 +49,7 @@ variable_invert: 0
 variable_tolerance: 0.015       # mm accepted as OK (0.015 on M4 ~ 8 degrees)
 variable_oks_needed: 2          # consecutive OK readings to move on
 variable_max_passes: 4          # full verification passes
-variable_pause: 4.0             # seconds between readings (time to hear the phrase)
+variable_pause: 2.5             # seconds after each phrase, to turn the screw, before the next reading
 
 # --- Preparation ------------------------------------------------------
 variable_bed_temp: 60           # bed temperature (0 = no heating)
