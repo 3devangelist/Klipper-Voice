@@ -42,7 +42,7 @@ import wave
 
 import websockets
 
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 DEFAULT_CONF = "~/printer_data/config/klipper-voice.conf"
 
 EVENTS = ("start", "nozzle_heating", "nozzle_hot", "bed_heating", "bed_hot",
@@ -64,6 +64,7 @@ DEFAULTS = {
     "general": {
         "moonraker": "ws://127.0.0.1:7125/websocket",
         "startup": "Voice ready",
+        "test": "",                             # empty: use "startup"
         "queue": "3",
     },
     "voice": {
@@ -311,8 +312,7 @@ class KlipperVoice:
         elif cmd == "stop":
             self.stop_repeat()
         elif cmd == "test":
-            self.request(items_of(self.cp.get("general", "startup"))
-                         or ["Voice test"])
+            self.request(self.test_items())
         elif cmd == "repeat" and len(parts) == 3:
             try:
                 seconds = float(parts[1])
@@ -357,8 +357,13 @@ class KlipperVoice:
             f"{'' if saved else ' (not saved to the config file)'}")
         self.console(f"Voice speed: {self.length_scale:g}"
                      f"{' (saved)' if saved else ' (not saved)'}")
-        self.request(items_of(self.cp.get("general", "startup"))
-                     or ["Voice test"])
+        self.request(self.test_items())
+
+    def test_items(self):
+        """VOICE_TEST phrase: "test", else "startup", else a fixed one."""
+        return (items_of(self.cp.get("general", "test"))
+                or items_of(self.cp.get("general", "startup"))
+                or ["Voice test"])
 
     def save_option(self, section, key, value):
         """Rewrites "key = ..." inside [section] of the config file, keeping

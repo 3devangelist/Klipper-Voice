@@ -4,6 +4,7 @@
   "espeak": "pt",
   "length_scale": 1.4,
   "startup": "Voz pronta",
+  "test": "Teste de voz. A impressora está pronta para falar.",
   "events": {
     "start": "Impressão a começar",
     "nozzle_heating": "Bico a aquecer",

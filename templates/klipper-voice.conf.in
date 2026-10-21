@@ -11,8 +11,10 @@
 [general]
 # Moonraker address (usually no need to change)
 moonraker = ws://127.0.0.1:7125/websocket
-# Phrase spoken at startup and by VOICE_TEST (empty = silent at startup)
+# Phrase spoken when the service starts (empty = silent at startup)
 startup = @STARTUP@
+# Phrase spoken by VOICE_TEST and as the VOICE_SPEED sample
+test = @TEST@
 # Max phrases waiting to be spoken; older ones are dropped beyond this
 queue = 3
 

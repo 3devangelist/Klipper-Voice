@@ -4,6 +4,7 @@
   "espeak": "it",
   "length_scale": 1.1,
   "startup": "Voce pronta",
+  "test": "Prova della voce. La stampante è pronta a parlare.",
   "events": {
     "start": "Inizio stampa",
     "nozzle_heating": "Ugello in riscaldamento",

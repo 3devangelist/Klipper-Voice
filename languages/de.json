@@ -4,6 +4,7 @@
   "espeak": "de",
   "length_scale": 1.1,
   "startup": "Stimme bereit",
+  "test": "Sprachtest. Der Drucker ist bereit zu sprechen.",
   "events": {
     "start": "Druck startet",
     "nozzle_heating": "Düse heizt auf",

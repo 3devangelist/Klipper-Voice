@@ -4,6 +4,7 @@
   "espeak": "pl",
   "length_scale": 1.1,
   "startup": "Głos gotowy",
+  "test": "Test głosu. Drukarka jest gotowa do mówienia.",
   "events": {
     "start": "Rozpoczynam drukowanie",
     "nozzle_heating": "Dysza się nagrzewa",

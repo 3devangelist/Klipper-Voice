@@ -174,7 +174,7 @@ SAY MSG="Nozzle hot"
 | `VOICE_RESET` | back to the phrases in the conf |
 | `VOICE_SPEED SPEED=1.4` | speaking speed: 1.0 normal, higher = slower. Applied at once, saved in the conf, and a sample phrase is spoken. Without `SPEED` it shows the current value |
 | `VOICE_OFF` / `VOICE_ON` | mute / unmute (errors are always spoken) |
-| `VOICE_TEST` | speaks the startup phrase |
+| `VOICE_TEST` | speaks the test phrase (`test` in the conf) |
 
 **Two rules:**
 

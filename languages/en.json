@@ -4,6 +4,7 @@
   "espeak": "en",
   "length_scale": 1.1,
   "startup": "Voice ready",
+  "test": "Voice test. The printer is ready to talk.",
   "events": {
     "start": "Print starting",
     "nozzle_heating": "Nozzle heating",

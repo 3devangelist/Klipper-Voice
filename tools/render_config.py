@@ -29,6 +29,7 @@ def values(d):
     v = {
         "NAME": d["name"], "VOICE": d["voice"], "ESPEAK": d["espeak"],
         "LENGTH_SCALE": str(d["length_scale"]), "STARTUP": d["startup"],
+        "TEST": d["test"],
         "NEXT_STEPS": d["next_steps"],
     }
     for k, t in d["events"].items():
