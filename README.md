@@ -1,5 +1,7 @@
 # Klipper-Voice
 
+**English** | [Português](README.pt.md) · 📖 **[User manual, with screenshots](MANUAL.md)**
+
 Make your Klipper printer **talk**. Every important moment of a print is spoken aloud through the host's own speaker (PC, mini PC or Raspberry Pi with audio out), in your language and with your own phrases:
 
 > "Bed heating" … "Bed hot" … "Nozzle heating" … "Nozzle hot" … "10 percent complete" … "20 percent complete" … "Printer paused" *(repeated every 5 minutes until you are back)* … "Print complete"
@@ -79,7 +81,7 @@ In `printer.cfg`:
 [include Voice_Settings.cfg]
 ```
 
-Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic events already work.
+Restart Klipper and type `VOICE_TEST` in the console. From then on the automatic events already work. The [user manual](MANUAL.md) shows everyday use in Mainsail, step by step.
 
 Too loud, too fast? Set them in `Voice_Settings.cfg`, like any other Klipper setting, then Save & Restart:
 
@@ -145,6 +147,10 @@ paused_repeat_minutes = 3
 ```
 
 - Each message starts with an **intro call**, an attention sound like in a shopping centre (`introcall` in `[sounds]`, empty = off). It is skipped when the message brings its own sound, or when the previous one ended less than `introcall_gap` seconds ago (60 by default), so bed leveling and phrases in a row are not interrupted.
+- Progress follows `M73` if your slicer emits it, otherwise the file position.
+- Heating is only announced for real heat-ups, at least `heating_min_delta` degrees, so small temperature changes during a print stay silent.
+
+Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), sound card and sound processing. Volume and speed are in `Voice_Settings.cfg`.
 
 ## Your own sounds (`voice_sounds/`)
 
@@ -157,10 +163,6 @@ One folder per sound, next to `printer.cfg`:
 | `introcall/` | before each message (the intro call) |
 
 Upload any audio file into a folder from Mainsail/Fluidd: any name, wav, mp3, ogg or flac. Put several and one is picked at random each time. An empty folder stays silent and the phrase is still spoken. The installer fills each folder with a simple default sound.
-- Progress follows `M73` if your slicer emits it, otherwise the file position.
-- Heating is only announced for real heat-ups, at least `heating_min_delta` degrees, so small temperature changes during a print stay silent.
-
-Other options, all commented in the file: night mode (silent at night, errors still spoken), voice engine (`piper`, `espeak`, or `text` to test without audio), sound card and sound processing. Volume and speed are in `Voice_Settings.cfg`.
 
 ## Phrases from the slicer
 
@@ -273,16 +275,13 @@ Your files (`Voice_Messages.cfg`, `klipper-voice.conf`, `Voice_Settings.cfg`, `v
 
 ## Credits and licence
 
-Created by Ricardo Pereira for an Ender 6 in Vila Nova de Gaia, Portugal - vivecoded with Claude.
+Created by Ricardo Pereira for an Ender 6 in Vila Nova de Gaia, Portugal — vibe-coded with Claude.
 
-"CLAUDE"
-Adiciona aqui um texto a explicar de onde a ideia nasceu
-problemas na impressora por instabilidade de pacotes e problemas no cartão SD mudei de cartão 2 vezes no ultimo ano!
-comprei um pc mini hp por 80 euros  HP 800 G2 MINI CORE i3-6100T 6-GEN 4GB 128GB SSD
-quando estava a configurar o sistema lembreime que tinha placa de som e uma pequena coluna e neste contexto nasceu este sistema
+### How it started
 
-Corrige este texto e coloca direito 
+My Ender 6 ran Klipper on a Raspberry Pi, and it was never fully stable: packages kept breaking, and in a single year two SD cards died on me. So I replaced the Pi with a second-hand mini PC, an HP EliteDesk 800 G2 Mini (Core i3-6100T, 4 GB RAM, 128 GB SSD), bought for 80 euros.
 
+While I was setting it up, I remembered that this little PC has a sound card, and I had a small speaker lying around. Why not let the printer talk? That is how Klipper-Voice was born.
 
 Repository layout inspired by [KAMP](https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging).
 
