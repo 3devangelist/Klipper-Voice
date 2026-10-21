@@ -226,19 +226,36 @@ Klipper only accepts `NAME=value` parameters, so it is `VOICE MUTE=1`, not `VOIC
 
 Copy these into your own macros file (for example `macros.cfg`), never into the `Voice/` folder. Change the phrases to your language, then **SAVE & RESTART**. The automatic events (print start, heating, pause, end…) are already spoken: do not add `SAY` for them, or you will hear them twice.
 
-**Stages of your start macro.** Add `SAY` lines to the `START_PRINT` you already have, without changing anything else. With `WAIT=1` each phrase is heard in full before the motors start:
+**Stages of your start macro.** Add `SAY` lines to the `START_PRINT` you already have, without changing anything else. This is the real `START_PRINT` of the author's Ender 6 (with KAMP), phrases in English:
 
 ```ini
 [gcode_macro START_PRINT]
 gcode:
-    # ... your lines ...
-    SAY MSG="Homing" WAIT=1
+    {% set BED = params.BED|default(printer.heater_bed.target)|float %}
+    {% set EXTRUDER = params.EXTRUDER|default(printer.extruder.target)|float %}
+    {% set SOAK = params.SOAK|default(5)|int %}
+    M190 S{BED}                  ; bed at temperature
+    M109 S150                    ; warm nozzle
+    SAY MSG="sound:introcall | Homing" WAIT=1
     G28
-    SAY MSG="Meshing the bed" WAIT=1
+    G90
+    G1 X150 Y137 Z5 F6000
+    SAY MSG="sound:introcall | Waiting for the bed temperature to settle" WAIT=1
+    G4 P{SOAK * 60000}           ; wait SOAK minutes
+    G28 Z
+    SAY MSG="sound:introcall | Measuring the bed" WAIT=1
     BED_MESH_CALIBRATE
-    SAY MSG="Purging" WAIT=1
-    # ... your purge line ...
+    SMART_PARK
+    M109 S{EXTRUDER}             ; printing temperature
+    SAY MSG="sound:introcall | Purging" WAIT=1
+    LINE_PURGE
+    SAY MSG="sound:introcall | Start sequence complete! Printing"
 ```
+
+- **`WAIT=1`** makes Klipper wait until each phrase is over before the motors start, so the noise does not cover it.
+- **The last phrase has no `WAIT=1`, on purpose:** after the purge the nozzle is hot over the bed, and waiting there would ooze before the first layer.
+- **`sound:introcall`** forces the "ding-dong" on every phrase, even in a row. Without it, the intro call only plays when the previous message was more than a minute ago.
+- **`SMART_PARK` and `LINE_PURGE` come from KAMP.** Without KAMP, use your own purge.
 
 **Load and unload filament:**
 

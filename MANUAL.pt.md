@@ -69,7 +69,7 @@ Antes de cada mensagem ouves um pequeno **introcall** (o "ding-dong" dos centros
 
 ## 3. Testar a voz
 
-Abre a **Console** e escreve **`VOICE`**. A impressora diz a frase de teste, e a consola mostra o volume, a velocidade e se a voz está ligada.
+Abre a página **Console** do Mainsail e escreve **`VOICE`**. A impressora diz a frase de teste, e a consola mostra o volume, a velocidade e se a voz está ligada.
 
 O `VOICE` é o único comando de que precisas para controlar a voz; tudo o resto são parâmetros dele (secções 6 e 8).
 
@@ -140,7 +140,7 @@ Estão no topo do **`Voice_Settings.cfg`**:
 
 Muda o número e clica em **SAVE & RESTART**.
 
-**Mais rápido, de ouvido, pela Console:**
+**Mais rápido, de ouvido, na página Console:**
 
 ```
 VOICE VOLUME=70
@@ -224,19 +224,36 @@ O Klipper só aceita parâmetros `NOME=valor`, por isso é `VOICE MUTE=1` e não
 
 Copia-as para o teu ficheiro de macros (por exemplo `macros.cfg`), nunca para a pasta `Voice/`. Põe as frases à tua maneira e faz **SAVE & RESTART**. Os eventos automáticos (início da impressão, aquecimento, pausa, fim…) já são ditos: não lhes acrescentes `SAY`, senão ouves tudo duas vezes.
 
-**Etapas da tua macro de início.** Acrescenta linhas `SAY` ao `START_PRINT` que já tens, sem mudar mais nada. Com `WAIT=1` cada frase é ouvida inteira antes de os motores arrancarem:
+**Etapas da tua macro de início.** Acrescenta linhas `SAY` ao `START_PRINT` que já tens, sem mudar mais nada. Este é o `START_PRINT` real da Ender 6 do autor (com KAMP):
 
 ```ini
 [gcode_macro START_PRINT]
 gcode:
-    # ... as tuas linhas ...
-    SAY MSG="A fazer o home" WAIT=1
+    {% set BED = params.BED|default(printer.heater_bed.target)|float %}
+    {% set EXTRUDER = params.EXTRUDER|default(printer.extruder.target)|float %}
+    {% set SOAK = params.SOAK|default(5)|int %}
+    M190 S{BED}                  ; cama à temperatura
+    M109 S150                    ; bico morno
+    SAY MSG="sound:introcall | Obtenção de zero" WAIT=1
     G28
-    SAY MSG="A fazer a malha da cama" WAIT=1
+    G90
+    G1 X150 Y137 Z5 F6000
+    SAY MSG="sound:introcall | À espera que a cama estabilize a temperatura" WAIT=1
+    G4 P{SOAK * 60000}           ; espera SOAK minutos
+    G28 Z
+    SAY MSG="sound:introcall | Medição de desvio da cama" WAIT=1
     BED_MESH_CALIBRATE
-    SAY MSG="A purgar" WAIT=1
-    # ... a tua linha de purga ...
+    SMART_PARK
+    M109 S{EXTRUDER}             ; temperatura de impressão
+    SAY MSG="sound:introcall | Iniciação de purga" WAIT=1
+    LINE_PURGE
+    SAY MSG="sound:introcall | Algoritmo de começo de impressão concluído! Impressão iniciada"
 ```
+
+- **`WAIT=1`** faz o Klipper esperar que cada frase acabe antes de os motores arrancarem, por isso o barulho não as tapa.
+- **A última frase não tem `WAIT=1`, de propósito:** depois da purga o bico está quente em cima da cama, e esperar ali faria escorrer plástico antes da primeira camada.
+- **`sound:introcall`** força o "ding-dong" em todas as frases, mesmo seguidas. Sem ele, o introcall só toca se a mensagem anterior tiver sido há mais de um minuto.
+- **`SMART_PARK` e `LINE_PURGE` são do KAMP.** Se não o usas, põe a tua purga.
 
 **Carregar e descarregar filamento:**
 
