@@ -32,6 +32,13 @@ O Klipper nunca toca na placa de som: o serviço ouve o Moonraker como um proces
 
 Em ARM de 32 bits (armv6/armv7, por exemplo o Raspberry Pi OS de 32 bits) o piper não pode ser instalado, por isso a impressora fala com o espeak. Um sistema de 64 bits dá-te as vozes naturais.
 
+> [!WARNING]
+> **Ainda por testar — a ajuda é bem-vinda.** Até agora o Klipper-Voice só correu numa impressora: uma Ender 6 com um mini PC x86 (HP EliteDesk 800 G2 Mini), Debian 13 e Mainsail, a falar português de Portugal.
+> - **Ainda não testado:** Raspberry Pi (64 bits com piper, 32 bits com espeak) e Fluidd.
+> - **Traduções:** só o português de Portugal foi revisto por alguém nativo. As frases nas outras línguas foram escritas com ajuda de IA, e as respetivas vozes do piper ainda não foram ouvidas.
+>
+> Se o experimentares noutra máquina ou noutra língua, conta-nos como correu, ou envia correções, num [issue](https://github.com/3devangelist/Klipper-Voice/issues) ou num pull request.
+
 ## Instalação
 
 ```bash
@@ -118,7 +125,7 @@ variable_progress: "{p} por cento feito"
 variable_start: ""
 ```
 
-- Mantém as aspas. `""` deixa essa mensagem em silêncio.
+- Mantém as aspas. `""` deixa essa mensagem em silêncio. Uma aspa esquecida impede o Klipper de arrancar: ele mostra a linha, corrige-a e faz Save & Restart.
 - `sound:done | texto` toca um som da pasta `voice_sounds/done/` e depois o texto. Usa `|` para encadear sons e frases.
 - Nunca uses `;` nem `#` dentro de uma frase.
 - As frases do nivelamento da cama estão no fim do mesmo ficheiro.
@@ -224,6 +231,15 @@ Para ajuda a ligar a voz às tuas macros, o **[PROMPT_AI.md](PROMPT_AI.md)** tem
 1. Copia `languages/en.json` para `languages/<código>.json`, por exemplo `nl.json`.
 2. Traduz as frases. Escolhe uma `voice` do [piper-voices](https://huggingface.co/rhasspy/piper-voices) e um código de língua do `espeak`.
 3. A língua passa a aparecer na lista do instalador. Pull requests são bem-vindos.
+
+Antes de enviares um pull request, corre os testes (não precisam de impressora):
+
+```bash
+python3 tests/test_klipper_voice.py
+python3 tests/test_languages.py
+```
+
+O GitHub também os corre a cada push. O que mudou em cada versão está no [CHANGELOG](CHANGELOG.md).
 
 ## Extra opcional: nivelar a cama por voz
 

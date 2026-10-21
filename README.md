@@ -32,6 +32,13 @@ Klipper never touches the sound card: the service listens to Moonraker as a sepa
 
 On 32-bit ARM (armv6/armv7, e.g. 32-bit Raspberry Pi OS) piper cannot be installed, so the printer speaks with espeak. A 64-bit system gives you the natural voices.
 
+> [!WARNING]
+> **Still to be tested — help welcome.** Klipper-Voice has run on one printer so far: an Ender 6 with an x86 mini PC (HP EliteDesk 800 G2 Mini), Debian 13 and Mainsail, speaking Portuguese (Portugal).
+> - **Not tested yet:** Raspberry Pi (64-bit with piper, 32-bit with espeak) and Fluidd.
+> - **Translations:** only Portuguese (Portugal) has been checked by a native speaker. The phrases in the other languages were written with AI help, and their piper voices have not been listened to yet.
+>
+> If you try it on another setup or language, please tell us how it went, or send corrections, in an [issue](https://github.com/3devangelist/Klipper-Voice/issues) or a pull request.
+
 ## Installation
 
 ```bash
@@ -118,7 +125,7 @@ variable_progress: "{p} percent done"
 variable_start: ""
 ```
 
-- Keep the quotes. `""` keeps that message silent.
+- Keep the quotes. `""` keeps that message silent. A missing quote stops Klipper from starting: it shows the line, fix it and Save & Restart.
 - `sound:done | text` plays a sound from the folder `voice_sounds/done/`, then the text. Use `|` to chain sounds and phrases.
 - Never use `;` or `#` inside a phrase.
 - The bed leveling phrases are at the end of the same file.
@@ -224,6 +231,15 @@ For help hooking the voice into your own macros, **[PROMPT_AI.md](PROMPT_AI.md)*
 1. Copy `languages/en.json` to `languages/<code>.json`, for example `nl.json`.
 2. Translate the phrases. Pick a `voice` from [piper-voices](https://huggingface.co/rhasspy/piper-voices) and an `espeak` language code.
 3. It then shows up in the installer's list. Pull requests are welcome.
+
+Before sending a pull request, run the tests (they need no printer):
+
+```bash
+python3 tests/test_klipper_voice.py
+python3 tests/test_languages.py
+```
+
+GitHub also runs them on every push. What changed in each version is in the [CHANGELOG](CHANGELOG.md).
 
 ## Optional add-on: voice-guided bed leveling
 

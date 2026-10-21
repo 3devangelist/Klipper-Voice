@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Debian 12 ships 3.11, Debian 13 ships 3.13
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Service logic
+        run: python3 tests/test_klipper_voice.py
+      - name: Languages and templates
+        run: python3 tests/test_languages.py
+      - name: Shell scripts
+        run: |
+          bash -n install.sh
+          bash -n uninstall.sh
+          test -x install.sh && test -x uninstall.sh

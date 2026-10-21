@@ -4,6 +4,9 @@
 
 Este manual mostra como usar o Klipper-Voice no dia a dia a partir do Mainsail. Para o instalar, vê o [README](README.pt.md). Tudo o que está aqui faz-se no browser; não precisas de SSH.
 
+> [!WARNING]
+> **Ainda por testar.** As imagens vêm da única máquina testada até agora: um mini PC x86 com Debian 13 e Mainsail. O Raspberry Pi e o Fluidd ainda não foram testados; no Fluidd os menus têm outros nomes, mas os ficheiros são os mesmos. Só as frases em português de Portugal foram revistas por alguém nativo; as outras línguas foram escritas com ajuda de IA. As correções são bem-vindas num [issue](https://github.com/3devangelist/Klipper-Voice/issues).
+
 ## Índice
 
 1. [O que vais ouvir](#1-o-que-vais-ouvir)
@@ -83,6 +86,9 @@ Regras simples:
 - **O nome da tua impressora:** por exemplo `variable_startup: "Ender 6 conectada!"`.
 
 As frases do nivelamento da cama estão no fim do mesmo ficheiro.
+
+> [!CAUTION]
+> **Uma aspa esquecida para o Klipper.** O `Voice_Messages.cfg` é lido pelo Klipper como o `printer.cfg`, por isso uma linha estragada, por exemplo sem uma das aspas, impede o Klipper de arrancar até ser corrigida. O Klipper mostra o ficheiro e a linha com o problema: abre outra vez o `Voice_Messages.cfg`, corrige essa linha e clica em **SAVE & RESTART**. É o preço de ter todas as frases num só ficheiro simples, editável no Mainsail.
 
 ## 5. Volume e velocidade
 
