@@ -175,6 +175,12 @@ if [ -L "$CONFIG/Voice" ] || [ ! -e "$CONFIG/Voice" ]; then
 else
   red "${CONFIG}/Voice already exists and is not a symlink. Left untouched."
 fi
+# Speaking-state file: the service writes 50 while it speaks, 0 when quiet;
+# Klipper reads it as [temperature_sensor _voice] so SAY WAIT=1 can wait.
+BUSY="${PRINTER_DATA}/comms/klipper-voice-busy"
+mkdir -p "$(dirname "$BUSY")"
+[ -e "$BUSY" ] || echo 0 > "$BUSY"
+export KV_BUSY_FILE="$BUSY"
 # User files: only if they do not exist yet
 for f in klipper-voice.conf Voice_Messages.cfg Voice_Settings.cfg; do
   if [ -e "$CONFIG/$f" ]; then
@@ -184,6 +190,11 @@ for f in klipper-voice.conf Voice_Messages.cfg Voice_Settings.cfg; do
     green "Created ${CONFIG}/${f} (${LANG_CODE})"
   fi
 done
+# Voice_Settings.cfg from an older version: no [temperature_sensor _voice]
+if ! grep -q 'temperature_sensor _voice' "$CONFIG/Voice_Settings.cfg"; then
+  yellow "For SAY ... WAIT=1, add to the end of Voice_Settings.cfg:"
+  printf '\n[temperature_sensor _voice]\nsensor_type: temperature_host\nsensor_path: %s\nmin_temp: -10\nmax_temp: 100\n\n' "$BUSY"
+fi
 # Sound folders: the service plays whatever is inside (any name; wav, mp3,
 # ogg, flac...; one at random if there are several). Default sounds are
 # generated with sox; replace them with your own.
@@ -224,6 +235,8 @@ Wants=moonraker.service
 User=${USER}
 SupplementaryGroups=audio
 ExecStart="${VENV}/bin/python3" "${REPO}/klipper_voice/klipper_voice.py" "${CONFIG}/klipper-voice.conf"
+# never leave SAY WAIT=1 waiting if the service stops or crashes
+ExecStopPost=/bin/sh -c 'echo 0 > "${BUSY}"'
 Restart=always
 RestartSec=5
 Nice=10

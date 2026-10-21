@@ -273,8 +273,31 @@ def test_sound_folders():
     check("missing", v.find_sound("nothing"), None)
 
 
+async def test_busy_file():
+    """50000 while speaking, 0 when quiet: what SAY WAIT=1 waits on."""
+    d = tempfile.mkdtemp()
+    busy = os.path.join(d, "busy")
+    conf = os.path.join(d, "kv.conf")
+    open(conf, "w", encoding="utf-8").write(
+        f"[general]\nbusy_file = {busy}\n[voice]\nengine = text\n")
+    v = kv.KlipperVoice(conf)
+    v.chime = ""
+    v.set_busy(False)
+    check("quiet at start", open(busy).read(), "0\n")
+    task = asyncio.create_task(v.speaker())
+    line(v, "SAY: Ola")
+    check("speaking", open(busy).read(), "50000\n")
+    await asyncio.sleep(0.3)
+    check("quiet again after the phrase", open(busy).read(), "0\n")
+    task.cancel()
+    v.muted = True
+    line(v, "SAY: nada")                       # muted: nothing to wait for
+    check("muted: stays quiet", open(busy).read(), "0\n")
+
+
 def main():
     asyncio.run(test_print_events())
+    asyncio.run(test_busy_file())
     test_speed_and_volume_in_conf()
     test_intro_call()
     test_voice_messages()

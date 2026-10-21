@@ -203,6 +203,7 @@ VOICE EVENT=progress MSG="%p por cento do suporte"
 | Comando                                   | O que faz                                                         |
 | ----------------------------------------- | ----------------------------------------------------------------- |
 | `SAY MSG="texto"`                         | diz o texto                                                       |
+| `SAY MSG="texto" WAIT=1`                  | diz o texto e o Klipper espera que acabe antes de avançar         |
 | `PLAY_SOUND FILE=done`                    | toca um som de uma pasta de `voice_sounds`                        |
 | `SAY_REPEAT SEC=60 MSG="Falta filamento"` | repete até `SAY_STOP`, ou até uma impressão começar ou continuar  |
 | `SAY_STOP`                                | para a repetição                                                  |
@@ -214,21 +215,26 @@ VOICE EVENT=progress MSG="%p por cento do suporte"
 
 O Klipper só aceita parâmetros `NOME=valor`, por isso é `VOICE MUTE=1` e não `VOICE OFF`.
 
+**Esperar que a frase acabe: `WAIT=1`.** Normalmente o Klipper não espera pela voz: manda a frase e passa logo ao comando seguinte. Se esse comando fizer barulho (um `G28`, a purga, as ventoinhas), tapa o fim da frase e parece que foi cortada. Com `WAIT=1`, o Klipper só avança quando a última palavra (e o som) acabar.
+
+> [!WARNING]
+> Durante a espera a cabeça fica parada. Usa `WAIT=1` na preparação (`START_PRINT`, calibrações, carregar filamento), **nunca a meio da impressão** (por exemplo no *layer change*), senão fica uma marca na peça.
+
 ## 9. Macros de exemplo
 
 Copia-as para o teu ficheiro de macros (por exemplo `macros.cfg`), nunca para a pasta `Voice/`. Põe as frases à tua maneira e faz **SAVE & RESTART**. Os eventos automáticos (início da impressão, aquecimento, pausa, fim…) já são ditos: não lhes acrescentes `SAY`, senão ouves tudo duas vezes.
 
-**Etapas da tua macro de início.** Acrescenta linhas `SAY` ao `START_PRINT` que já tens, sem mudar mais nada:
+**Etapas da tua macro de início.** Acrescenta linhas `SAY` ao `START_PRINT` que já tens, sem mudar mais nada. Com `WAIT=1` cada frase é ouvida inteira antes de os motores arrancarem:
 
 ```ini
 [gcode_macro START_PRINT]
 gcode:
     # ... as tuas linhas ...
-    SAY MSG="A fazer o home"
+    SAY MSG="A fazer o home" WAIT=1
     G28
-    SAY MSG="A fazer a malha da cama"
+    SAY MSG="A fazer a malha da cama" WAIT=1
     BED_MESH_CALIBRATE
-    SAY MSG="A purgar"
+    SAY MSG="A purgar" WAIT=1
     # ... a tua linha de purga ...
 ```
 
@@ -278,7 +284,7 @@ gcode:
 ```ini
 [gcode_macro PID_BED]
 gcode:
-    SAY MSG="Calibração PID da cama a começar"
+    SAY MSG="Calibração PID da cama a começar" WAIT=1
     PID_CALIBRATE HEATER=heater_bed TARGET=60
     SAY MSG="PID da cama feito, não te esqueças de gravar a configuração"
 ```
@@ -303,7 +309,7 @@ Para um horário fixo, o modo noturno do `klipper-voice.conf` (`[night]`) faz is
 VOICE EVENT=complete MSG="[input_filename_base] está pronto"
 ```
 
-**Layer change G-code**, para ouvires quando a primeira camada acaba:
+**Layer change G-code**, para ouvires quando a primeira camada acaba (aqui sem `WAIT=1`: é a meio da impressão):
 
 ```gcode
 {if layer_num == 1}SAY MSG="Primeira camada feita"{endif}

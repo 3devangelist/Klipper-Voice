@@ -34,17 +34,26 @@ def load_macros():
 MACROS = load_macros()
 
 
+def render(name, printer=None, **params):
+    return ENV.from_string(MACROS[name]).render(
+        params={k.upper(): str(v) for k, v in params.items()},
+        printer=printer or {}, action_raise_error=raise_error)
+
+
 def run(name, **params):
     """The RESPOND lines a macro would send, as 'PREFIX text'."""
-    out = ENV.from_string(MACROS[name]).render(
-        params={k.upper(): str(v) for k, v in params.items()},
-        action_raise_error=raise_error)
     lines = []
-    for ln in out.splitlines():
+    for ln in render(name, **params).splitlines():
         m = re.match(r'\s*RESPOND PREFIX="([^"]+)" MSG="(.*)"\s*$', ln)
         if m:
             lines.append(f"{m.group(1)} {m.group(2)}")
     return lines
+
+
+def commands(name, printer=None, **params):
+    """Every G-code line a macro would run (comments dropped)."""
+    return [ln.strip() for ln in render(name, printer, **params).splitlines()
+            if ln.strip() and not ln.strip().startswith("#")]
 
 
 def check(name, got, expected):
@@ -80,6 +89,20 @@ def main():
 
     check("SAY", run("SAY", msg='Hi "there"'), ["SAY: Hi 'there'"])
     check("SAY empty", run("SAY"), [])
+    check("SAY without WAIT does not wait",
+          commands("SAY", msg="Ola"), ['RESPOND PREFIX="SAY:" MSG="Ola"'])
+    check("SAY WAIT=1 with the _voice sensor waits exactly",
+          commands("SAY", printer={"temperature_sensor _voice": {}},
+                   msg="sound:introcall | Obtenção de zero", wait=1),
+          ['RESPOND PREFIX="SAY:" MSG="sound:introcall | Obtenção de zero"',
+           "G4 P1500",
+           'TEMPERATURE_WAIT SENSOR="temperature_sensor _voice" MAXIMUM=1'])
+    # without the sensor: 3.5 s + 2.5 s per sound + 0.07 s/letter * speed
+    est = commands("SAY", printer={"gcode_macro _VOICE_SETTINGS": {"speed": 2.0}},
+                   msg="sound:introcall | abcdefghij", wait=1)
+    check("SAY WAIT=1 without the sensor: estimated dwell", est[-1], "G4 P7400")
+    est = commands("SAY", msg="abcdefghij", wait=1)       # default speed 1.2
+    check("SAY WAIT=1, no settings either", est[-1], "G4 P4340")
     check("PLAY_SOUND", run("PLAY_SOUND", file="done"), ["SOUND: done"])
     check("SAY_REPEAT", run("SAY_REPEAT", sec=30, msg="sound:pause | Filament"),
           [f"{C} repeat 30.0 sound:pause | Filament"])

@@ -15,6 +15,15 @@ variable_volume: 100
 variable_speed: @LENGTH_SCALE@
 gcode:
 
+# Lets SAY MSG="..." WAIT=1 wait until the phrase has been said: the voice
+# service writes 50 here while it speaks and 0 when it is quiet. Hidden in
+# Mainsail/Fluidd (the name starts with _). Do not remove.
+[temperature_sensor _voice]
+sensor_type: temperature_host
+sensor_path: @BUSY_FILE@
+min_temp: -10
+max_temp: 100
+
 # =====================================================================
 #  Bed leveling - only used with Voice/Bed_Level_Voice.cfg (printers with
 #  manual bed screws and a probe). Its phrases are in Voice_Messages.cfg.

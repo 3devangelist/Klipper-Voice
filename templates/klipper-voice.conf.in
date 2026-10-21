@@ -14,6 +14,9 @@
 [general]
 # Moonraker address (usually no need to change)
 moonraker = ws://127.0.0.1:7125/websocket
+# Speaking-state file, read by Klipper as [temperature_sensor _voice]
+# (in Voice_Settings.cfg) so SAY WAIT=1 waits for the phrase
+busy_file = @BUSY_FILE@
 # Max phrases waiting to be spoken; older ones are dropped beyond this
 queue = 3
 

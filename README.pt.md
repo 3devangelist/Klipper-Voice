@@ -228,6 +228,7 @@ SAY MSG="Bico quente"
 | Comando | Faz |
 |---|---|
 | `SAY MSG="texto"` | diz o texto |
+| `SAY MSG="texto" WAIT=1` | diz o texto, e o Klipper espera que acabe (através do `[temperature_sensor _voice]` escondido no `Voice_Settings.cfg`). Para o `START_PRINT` e as calibrações, nunca a meio da impressão: a cabeça fica parada enquanto espera |
 | `PLAY_SOUND FILE=done` | toca um som de uma pasta de `voice_sounds` (ou um ficheiro: `FILE=meu.mp3`) |
 | `SAY_REPEAT SEC=60 MSG="texto"` | repete até `SAY_STOP` ou até a impressão continuar |
 | `SAY_STOP` | para a repetição |

@@ -228,6 +228,7 @@ SAY MSG="Nozzle hot"
 | Command | Does |
 |---|---|
 | `SAY MSG="text"` | speaks the text |
+| `SAY MSG="text" WAIT=1` | speaks it, and Klipper waits until it has been said (via the hidden `[temperature_sensor _voice]` in `Voice_Settings.cfg`). For `START_PRINT` and calibrations, never mid-print: the head stands still while it waits |
 | `PLAY_SOUND FILE=done` | plays a sound from a `voice_sounds` folder (or a file: `FILE=my.mp3`) |
 | `SAY_REPEAT SEC=60 MSG="text"` | repeats until `SAY_STOP` or the print resumes |
 | `SAY_STOP` | stops the repetition |

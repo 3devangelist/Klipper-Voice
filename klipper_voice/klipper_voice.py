@@ -82,6 +82,9 @@ DEFAULTS = {
         "startup": "Printer connected!",
         "test": "",                             # empty: use "startup"
         "queue": "3",
+        # "50" while speaking, "0" when quiet (in thousandths, as Klipper's
+        # temperature_host reads it): lets SAY WAIT=1 wait for the phrase
+        "busy_file": "~/printer_data/comms/klipper-voice-busy",
     },
     "voice": {
         "engine": "piper",                      # piper | espeak | text
@@ -178,6 +181,8 @@ class KlipperVoice:
             "sounds", "introcall_gap",
             fallback=self.cp.getfloat("sounds", "chime_gap", fallback=60))
         self.last_spoken = float("-inf")  # when the last message ended
+        self.busy_file = expand(self.cp.get("general", "busy_file"))
+        self.busy = None                  # last state written to busy_file
         self.wav = f"/tmp/klipper-voice-{os.getuid()}.wav"
         self.queue = collections.deque(
             maxlen=max(1, self.cp.getint("general", "queue")))
@@ -241,13 +246,19 @@ class KlipperVoice:
             p = subprocess.Popen(cmd, stdin=prev,
                                  stdout=subprocess.DEVNULL if last
                                  else subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL)
+                                 # the player's errors go to the log
+                                 stderr=subprocess.PIPE if last
+                                 else subprocess.DEVNULL)
             if prev:
                 prev.close()
             prev = p.stdout
             procs.append(p)
         for p in reversed(procs):
             p.wait()
+        err = procs[-1].stderr.read().decode(errors="replace").strip()
+        procs[-1].stderr.close()
+        if err or procs[-1].returncode:
+            log(f"{cmds[-1][0]} (exit {procs[-1].returncode}): {err}")
 
     def vol(self):
         """sox effect for the volume option (100 = as is)."""
@@ -319,7 +330,21 @@ class KlipperVoice:
                     except Exception as e:           # noqa: BLE001
                         log(f"Error playing '{item}': {e}")
                 self.last_spoken = time.monotonic()
+            self.set_busy(False)                     # SAY WAIT=1 goes on
             self.has_request.clear()
+
+    def set_busy(self, busy):
+        """Writes the speaking state for Klipper's [temperature_sensor
+        _voice] (temperature_host reads thousandths: 50000 = 50)."""
+        if busy == self.busy:
+            return
+        self.busy = busy
+        try:
+            if os.path.isdir(os.path.dirname(self.busy_file)):
+                with open(self.busy_file, "w") as f:
+                    f.write("50000\n" if busy else "0\n")
+        except OSError as e:
+            log(f"Could not write {self.busy_file}: {e}")
 
     def with_chime(self, items):
         """Puts the attention sound before a message, unless the message
@@ -354,6 +379,7 @@ class KlipperVoice:
         if self.queue and self.queue[-1] == entry:
             return                                   # same phrase queued
         self.queue.append(entry)
+        self.set_busy(True)
         self.has_request.set()
 
     # --------------------------------------------------------- repeat
@@ -824,6 +850,7 @@ class KlipperVoice:
                 delay = min(delay * 2, 30)
 
     async def run(self):
+        self.set_busy(False)
         if self.engine == "piper":
             self.load_piper()
         asyncio.create_task(self.speaker())
@@ -834,10 +861,14 @@ class KlipperVoice:
 
 def main():
     conf = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONF
+    voice = KlipperVoice(conf)
     try:
-        asyncio.run(KlipperVoice(conf).run())
+        asyncio.run(voice.run())
     except KeyboardInterrupt:
         pass
+    finally:
+        voice.busy = None
+        voice.set_busy(False)            # never leave SAY WAIT=1 waiting
 
 
 if __name__ == "__main__":

@@ -17,6 +17,14 @@ The voice controls are now a single command with parameters, and a single **VOIC
 
 **Breaking change:** the old commands are gone. If your slicer's G-code or your own macros use them, change them as in the table. `SAY`, `PLAY_SOUND`, `SAY_REPEAT` and `SAY_STOP` stay the same.
 
+### `SAY ... WAIT=1`: Klipper waits for the phrase
+
+- Normally Klipper sends a phrase and goes straight on; a noisy next command (`G28`, purge, fans) covers its end and it seems cut. With `SAY MSG="..." WAIT=1`, Klipper only goes on when the phrase, sound included, has been played.
+- Exact, not estimated: the service writes its speaking state to `~/printer_data/comms/klipper-voice-busy`, which Klipper reads as a hidden `[temperature_sensor _voice]` (in `Voice_Settings.cfg`), and `SAY` waits on it with `TEMPERATURE_WAIT`. The systemd unit sets it back to 0 if the service stops, so Klipper is never left waiting.
+- Older `Voice_Settings.cfg` without the sensor: `WAIT=1` falls back to a wait estimated from the length of the phrase. `install.sh` prints the block to add.
+- For preparation only (`START_PRINT`, calibrations): while it waits, the head stands still.
+- The player's errors (`aplay`) are now written to the log.
+
 ### Clearer voice
 
 - New default sound processing (`effects`): lighter compression that keeps the body of the voice. Chosen by ear on the Ender 6 speaker.

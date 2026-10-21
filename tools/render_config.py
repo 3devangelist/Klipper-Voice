@@ -30,6 +30,9 @@ def values(d):
         "NAME": d["name"], "VOICE": d["voice"], "ESPEAK": d["espeak"],
         "LENGTH_SCALE": str(d["length_scale"]), "STARTUP": d["startup"],
         "TEST": d["test"],
+        # the voice service's speaking-state file (install.sh sets it)
+        "BUSY_FILE": os.environ.get("KV_BUSY_FILE", os.path.expanduser(
+            "~/printer_data/comms/klipper-voice-busy")),
         "NEXT_STEPS": d["next_steps"],
     }
     for k, t in d["events"].items():

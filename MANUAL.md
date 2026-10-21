@@ -205,6 +205,7 @@ VOICE EVENT=progress MSG="%p percent of the bracket"
 | Command | What it does |
 |---|---|
 | `SAY MSG="text"` | speaks the text |
+| `SAY MSG="text" WAIT=1` | speaks the text and Klipper waits until it has been said before going on |
 | `PLAY_SOUND FILE=done` | plays a sound from a `voice_sounds` folder |
 | `SAY_REPEAT SEC=60 MSG="Filament needed"` | repeats until `SAY_STOP`, or until a print starts or resumes |
 | `SAY_STOP` | stops the repetition |
@@ -216,21 +217,26 @@ VOICE EVENT=progress MSG="%p percent of the bracket"
 
 Klipper only accepts `NAME=value` parameters, so it is `VOICE MUTE=1`, not `VOICE OFF`.
 
+**Wait until the phrase is over: `WAIT=1`.** Normally Klipper does not wait for the voice: it sends the phrase and goes straight on to the next command. If that command is noisy (a `G28`, the purge, the fans), it covers the end of the phrase and it seems cut. With `WAIT=1`, Klipper only goes on once the last word (and the sound) has been played.
+
+> [!WARNING]
+> While it waits, the head stands still. Use `WAIT=1` during preparation (`START_PRINT`, calibrations, loading filament), **never in the middle of a print** (for example in the *layer change* G-code), or it leaves a mark on the part.
+
 ## 9. Example macros
 
 Copy these into your own macros file (for example `macros.cfg`), never into the `Voice/` folder. Change the phrases to your language, then **SAVE & RESTART**. The automatic events (print start, heating, pause, end…) are already spoken: do not add `SAY` for them, or you will hear them twice.
 
-**Stages of your start macro.** Add `SAY` lines to the `START_PRINT` you already have, without changing anything else:
+**Stages of your start macro.** Add `SAY` lines to the `START_PRINT` you already have, without changing anything else. With `WAIT=1` each phrase is heard in full before the motors start:
 
 ```ini
 [gcode_macro START_PRINT]
 gcode:
     # ... your lines ...
-    SAY MSG="Homing"
+    SAY MSG="Homing" WAIT=1
     G28
-    SAY MSG="Meshing the bed"
+    SAY MSG="Meshing the bed" WAIT=1
     BED_MESH_CALIBRATE
-    SAY MSG="Purging"
+    SAY MSG="Purging" WAIT=1
     # ... your purge line ...
 ```
 
@@ -280,7 +286,7 @@ gcode:
 ```ini
 [gcode_macro PID_BED]
 gcode:
-    SAY MSG="Bed PID calibration started"
+    SAY MSG="Bed PID calibration started" WAIT=1
     PID_CALIBRATE HEATER=heater_bed TARGET=60
     SAY MSG="Bed PID done, remember to save the config"
 ```
@@ -305,7 +311,7 @@ For a fixed schedule, night mode in `klipper-voice.conf` (`[night]`) does it on 
 VOICE EVENT=complete MSG="[input_filename_base] is ready"
 ```
 
-**Layer change G-code**, to hear when the first layer is done:
+**Layer change G-code**, to hear when the first layer is done (no `WAIT=1` here: it is in the middle of the print):
 
 ```gcode
 {if layer_num == 1}SAY MSG="First layer done"{endif}
