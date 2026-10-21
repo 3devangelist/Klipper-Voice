@@ -32,9 +32,12 @@ A sonda indutiva **não vê o vidro**: mede a placa de alumínio por baixo. Se a
 
 Por isso, depois de pôr a fita, é preciso decidir: **desligar a malha** (ou usar uma malha plana) e voltar a afinar o Z offset, **ou** medir o vidro de outra forma (folha de papel / apalpa-folgas, ou um sensor que toque no vidro). Pensar nisto antes de colar fita.
 
+### Decidido
+
+- **Vai ser um projeto próprio** (repositório separado), não faz parte do Klipper-Voice. Quando o criar, esta secção passa para lá.
+
 ### Ainda por decidir
 
-- Onde fica o script: dentro do Klipper-Voice (não tem a ver com voz) ou num repositório próprio.
 - Se corre no PC (lê a API e abre o HTML) ou na impressora (macro que gera o ficheiro).
 
 ## 2. Klipper-Voice: o que ficou por fazer
