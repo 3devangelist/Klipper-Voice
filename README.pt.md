@@ -281,7 +281,7 @@ Criado por Ricardo Pereira para uma Ender 6 em Vila Nova de Gaia, Portugal — f
 
 A minha Ender 6 corria o Klipper num Raspberry Pi e nunca esteve totalmente estável: os pacotes iam-se estragando e, num só ano, morreram-me dois cartões SD. Por isso troquei o Pi por um mini PC em segunda mão, um HP EliteDesk 800 G2 Mini (Core i3-6100T, 4 GB de RAM, SSD de 128 GB), comprado por 80 euros.
 
-Enquanto o estava a configurar, lembrei-me de que este pequeno PC tem placa de som, e eu tinha uma pequena coluna lá por casa. Porque não pôr a impressora a falar? Foi assim que nasceu o Klipper-Voice.
+Enquanto o estava a configurar, lembrei-me de que este pequeno PC já traz placa de som e uma coluna incorporada. Sem nada para acrescentar nem ligar: porque não pôr a impressora a falar? Foi assim que nasceu o Klipper-Voice.
 
 Organização do repositório inspirada no [KAMP](https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging).
 
